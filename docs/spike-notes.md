@@ -104,7 +104,7 @@ Methods take and return plain JSON. No extra client config is needed for local; 
 
 ```sh
 export PATH="$HOME/.bun/bin:$PATH"
-nohup node node_modules/@relaycast/engine/dist/bin/serve.js --db ./relaycast.db --port 8787 > relay-engine.log 2>&1 &
+nohup node scripts/relay-engine.mjs --db ./relaycast.db --port 8787 > relay-engine.log 2>&1 &   # 127.0.0.1 only
 bun scripts/setup-relay.ts                     # idempotent
 bun run actors:dev                             # Terse dev server, 127.0.0.1:7100 (run actors:gen after changing public actor methods)
 bun bridge/expert-bridge.ts battery            # one terminal each
