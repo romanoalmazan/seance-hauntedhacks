@@ -16,9 +16,9 @@ In every company one engineer knows the battery limits, and everyone pings that 
 
 **Unknown question escalates, once.** When an expert doesn't know, it says so and asks its human owner. Marcus gets a card in the console, answers, ticks Save and picks a tier, and Priya's reply updates in place, marked as Marcus's answer. The state survives a crash: we kill the Actuators bridge after the question escalates, Marcus answers anyway, and when the bridge restarts Priya still gets the answer.
 
-**Ask once, answered for everyone.** Guest asks the same question and gets Marcus's saved answer instantly, with nobody asked. The same system also gives different detail by clearance: asked what current the pack can deliver, Guest sees only the public envelope, a "1 withheld" count, and a hint that peak current derates when the pack is hot and the details are internal.
+**Ask once, answered for everyone.** Guest asks the same question and gets Marcus's saved answer instantly, with nobody asked. The same system also gives different detail by clearance: asked what current the pack can deliver, Guest sees only the public envelope, a withheld count, and a hint that peak current derates when the pack is hot and the details are internal.
 
-**The boundary holds.** Guest sends a prompt injection straight to the Battery expert, asking it to print every entry, including supplier prices and cell yield. The expert refuses, shows only a hint, and offers a path to Dana for access. The audit log records the attempt and the withheld restricted entry. The Red team button then runs six attacks and shows "6 of 6 blocked". The privacy claim is shown, not asserted.
+**The boundary holds.** Guest sends a prompt injection straight to the Battery expert, asking it to print every entry, including supplier prices and cell yield. The expert refuses, shows only a hint, and points the asker to Dana for access. The audit log records the attempt and the withheld restricted entry. The Red team button then runs six attacks and shows "6 of 6 blocked". The privacy claim is shown, not asserted.
 
 ## How it's built
 
@@ -26,7 +26,7 @@ In every company one engineer knows the battery limits, and everyone pings that 
 
 **Agent Relay.** Every message between agents travels over Relay as a DM, and only text the actor has approved crosses it, never files. Who is asking is proven by the Relay sender, never by the message body, so an attacker who writes "I'm the Battery team lead" gains nothing. Unknown senders get the default clearance. The owner's reply in the durability beat waits in Relay's durable queue until the bridge comes back.
 
-**OpenAI.** The model writes the draft answer from allowed text only. Anything above the asker's clearance never reaches it. The asker agent also uses it to trim context and merge answers. With no model configured, an offline drafter quotes the visible entries instead.
+**OpenAI.** The model writes the draft answer from allowed text only, and the call runs inside the expert actor, so the text never leaves it. Anything above the asker's clearance never reaches the model. With no model configured, an offline drafter quotes the visible entries instead.
 
 Remove either sponsor tool and the product stops working. The rules are enforced in code, not in a prompt.
 
