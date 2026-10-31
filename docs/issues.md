@@ -43,3 +43,16 @@ after it. preflight.ts flags it red until then.
   answers from the visible entries. No owner card mid-beat if the Wi-Fi hiccups; the answer just reads like a quote list.
 - Answers are repeatable (temperature 0, seed 7): same sources every run, wording varies by a few words.
 - The consult also fires when the cited entry (act-L1) says "check with Battery", even if the model's wording doesn't.
+
+## 9. Optional: Durability+ beat (Stateful Apps)
+docs/durability-plus.md: kill the actuators bridge AND the Terse dev server, restart both, then Marcus sends. 5 of 5 on the
+demo laptop. Your call whether demo-script.txt uses it instead of 2½.
+Console note: while the Terse dev server is down, POST /owner-reply and GET /cards answer 500 "server error" (they read the
+expert's snapshot). The card comes back once Terse is up. If you want the page to say "actor restarting" instead of an
+error during those seconds, that's console-side.
+
+## 10. Beat 3b wording (rehearsal, 2 of 2 runs)
+demo-script.txt beat 3b says "Only the public envelope (48 V, 30 A continuous, 60 A peak for up to 10 s)". With the real
+model the answer is "The pack can deliver a continuous current of 30 A and a peak current of 60 A for up to 10 seconds
+while the cell temperature is below 40 °C [bat-01]." (no 48 V: the question asks about current). Pill partial, Sources
+bat-01, 1 withheld + the derating hint all match. Suggest dropping "48 V" from the expected text.
