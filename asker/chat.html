@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Séance</title>
+<style>
+  :root {
+    --bg: #14121a; --panel: #1d1a26; --raised: #272334; --line: #363047;
+    --text: #ece9f2; --muted: #a39db3; --accent: #b79cff;
+    --ok: #6fd6a1; --warn: #f0c36b; --bad: #f08a8a; --wait: #8ab8f0;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    display: grid; grid-template-columns: 280px 1fr;
+    background: var(--bg); color: var(--text);
+    font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  aside {
+    background: var(--panel); border-right: 1px solid var(--line);
+    padding: 20px; overflow-y: auto;
+  }
+  aside h1 { margin: 0; font-size: 22px; font-weight: 600; }
+  #me { margin: 2px 0 24px; color: var(--muted); font-size: 13px; }
+  aside h2 {
+    margin: 0 0 8px; color: var(--muted); font-size: 12px; font-weight: 600;
+    letter-spacing: .06em; text-transform: uppercase;
+  }
+  #teams { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+  .team {
+    width: 100%; padding: 10px 12px; text-align: left; cursor: pointer;
+    background: var(--raised); color: inherit; font: inherit;
+    border: 1px solid var(--line); border-radius: 8px;
+  }
+  .team:hover { border-color: var(--accent); }
+  .team b { display: block; color: var(--accent); font-weight: 600; }
+  .team small { display: block; color: var(--muted); font-size: 12.5px; line-height: 1.4; }
+  .aside-note { margin: 16px 0 0; color: var(--muted); font-size: 12.5px; }
+
+  main { display: grid; grid-template-rows: 1fr auto; min-height: 0; height: 100vh; }
+  #log { display: flex; flex-direction: column; gap: 12px; padding: 24px; overflow-y: auto; }
+  .bubble {
+    max-width: min(720px, 90%); padding: 10px 14px; border-radius: 12px;
+    white-space: pre-wrap; overflow-wrap: anywhere;
+  }
+  .bubble.user { align-self: flex-end; background: #3c3159; }
+  .bubble.agent { align-self: flex-start; background: var(--panel); border: 1px solid var(--line); }
+  .bubble.agent.waiting { color: var(--muted); }
+  .bubble.agent.failed { border-color: var(--bad); color: var(--bad); }
+
+  .notice { margin: 0 0 8px; color: var(--warn); }
+  .notice:last-child { margin-bottom: 0; }
+  .part + .part { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
+  .part-head { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+  .part-head b { font-weight: 600; }
+  .confidence { margin-left: auto; color: var(--muted); font-size: 12.5px; }
+  .pill {
+    padding: 1px 8px; border: 1px solid currentColor; border-radius: 999px;
+    font-size: 12px; font-weight: 600; line-height: 1.5;
+  }
+  .pill.answered { color: var(--ok); }
+  .pill.partial { color: var(--warn); }
+  .pill.refused { color: var(--bad); }
+  .pill.escalated { color: var(--wait); }
+  .pill.none { color: var(--muted); }
+  .sources { margin: 6px 0 0; color: var(--muted); font-size: 13px; }
+  .withheld {
+    margin: 8px 0 0; padding: 6px 10px; font-size: 13px;
+    background: var(--raised); border-left: 2px solid var(--warn); border-radius: 4px;
+  }
+  .withheld ul { margin: 2px 0 0; padding-left: 18px; color: var(--muted); }
+
+  form { display: flex; gap: 8px; padding: 16px 24px; border-top: 1px solid var(--line); }
+  #input {
+    flex: 1; min-width: 0; padding: 10px 12px; font: inherit; color: inherit;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
+  }
+  #input:focus-visible, .team:focus-visible, form button:focus-visible {
+    outline: 2px solid var(--accent); outline-offset: 1px;
+  }
+  form button {
+    padding: 0 18px; font: inherit; font-weight: 600; cursor: pointer;
+    color: var(--bg); background: var(--accent); border: 0; border-radius: 8px;
+  }
+  @media (max-width: 720px) {
+    body { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+    aside { border-right: 0; border-bottom: 1px solid var(--line); max-height: 40vh; }
+    main { height: auto; min-height: 0; }
+  }
+</style>
+</head>
+<body>
+<aside>
+  <h1>Séance</h1>
+  <p id="me"></p>
+  <h2>Team directory</h2>
+  <ul id="teams"></ul>
+  <p class="aside-note">You pick the team. Your agent never guesses. Click one to address it.</p>
+</aside>
+<main>
+  <div id="log" aria-live="polite"></div>
+  <form id="form">
+    <input id="input" aria-label="Your question" autocomplete="off" autofocus
+           placeholder="@actuators What peak current can I draw?">
+    <button type="submit">Ask</button>
+  </form>
+</main>
+<script>
+  const log = document.getElementById("log");
+  const input = document.getElementById("input");
+  const teamNames = {};
+
+  // Everything from the server goes in as text, never as HTML.
+  function el(tag, className, text) {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text !== undefined) node.textContent = text;
+    return node;
+  }
+
+  function addBubble(role, text) {
+    const bubble = el("div", `bubble ${role}`, text);
+    log.append(bubble);
+    log.scrollTop = log.scrollHeight;
+    return bubble;
+  }
+
+  function renderPart({ team, answer, error }) {
+    const part = el("section", "part");
+    const head = el("div", "part-head");
+    head.append(el("b", "", teamNames[team] ?? team));
+    part.append(head);
+
+    if (!answer) {
+      head.append(el("span", "pill none", "no answer"));
+      part.append(el("div", "", error ?? "No answer yet."));
+      return part;
+    }
+
+    head.append(el("span", `pill ${answer.status}`, answer.status));
+    head.append(el("span", "confidence", `Confidence ${Math.round(answer.confidence * 100)}%`));
+    part.append(el("div", "", answer.text));
+
+    if (answer.sources.length > 0) {
+      const sources = answer.sources.map((s) => `${s.id} ${s.title}`).join(" · ");
+      part.append(el("p", "sources", `Sources: ${sources}`));
+    }
+    if (answer.withheld.count > 0) {
+      const withheld = el("div", "withheld", `${answer.withheld.count} withheld`);
+      if (answer.withheld.hints.length > 0) {
+        const hints = el("ul");
+        for (const hint of answer.withheld.hints) hints.append(el("li", "", hint));
+        withheld.append(hints);
+      }
+      part.append(withheld);
+    }
+    return part;
+  }
+
+  function renderReply(bubble, reply) {
+    bubble.className = "bubble agent";
+    bubble.textContent = "";
+    if (reply.notice) bubble.append(el("p", "notice", reply.notice));
+    for (const ask of reply.asks) bubble.append(renderPart(ask));
+    if (reply.asks.length === 0 && reply.text !== reply.notice) bubble.append(reply.text);
+    log.scrollTop = log.scrollHeight;
+  }
+
+  async function send(text) {
+    addBubble("user", text);
+    const bubble = addBubble("agent waiting", "Asking…");
+    try {
+      const res = await fetch("/ask", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text }),
+      });
+      const reply = await res.json();
+      if (!res.ok) throw new Error(reply.error ?? `The asker returned ${res.status}`);
+      renderReply(bubble, reply);
+    } catch (err) {
+      bubble.className = "bubble agent failed";
+      bubble.textContent = `Couldn't ask: ${err.message}`;
+    }
+  }
+
+  document.getElementById("form").addEventListener("submit", (event) => {
+    event.preventDefault();
+    const text = input.value.trim();
+    if (!text) return;
+    input.value = "";
+    send(text);
+  });
+
+  function addressTeam(teamId) {
+    const mention = `@${teamId}`;
+    if (!input.value.includes(mention)) input.value = `${mention} ${input.value}`;
+    input.focus();
+  }
+
+  async function loadDirectory() {
+    const { me, teams } = await (await fetch("/directory")).json();
+    document.getElementById("me").textContent = `${me.human} · ${me.team}`;
+    document.title = `Séance · ${me.human}`;
+    const list = document.getElementById("teams");
+    for (const team of teams) {
+      teamNames[team.teamId] = team.displayName;
+      const button = el("button", "team");
+      button.type = "button";
+      button.append(el("b", "", `@${team.teamId}`));
+      button.append(el("small", "", `${team.ownerName}: ${team.owns}`));
+      button.addEventListener("click", () => addressTeam(team.teamId));
+      const item = el("li");
+      item.append(button);
+      list.append(item);
+    }
+  }
+
+  loadDirectory().catch((err) => addBubble("agent failed", `Couldn't load the directory: ${err.message}`));
+</script>
+</body>
+</html>
