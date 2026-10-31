@@ -427,6 +427,6 @@ Séance and Liaison are the same product at two zoom levels. Build Liaison, with
 - Two SDK families with different APIs. The website docs show a stale version. Trust the GitHub README and the shipped types.
 - Registration is create-only. A duplicate name returns 409. Save tokens and reuse them.
 - Subscribe for realtime. Don't poll; the hosted rate limit is easy to hit.
-- On start and after any reconnect, drain accepted deliveries and ack each one. Deliveries replay, so dedupe by `requestId`.
+- On start and after any reconnect, drain accepted deliveries and ack each one. Deliveries replay, so dedupe: asks by `requestId` in the actor, and in the Relay wrapper by delivery id (never by `requestId` alone: the owner's late answer reuses the ask's `requestId`).
 - No per-agent access control beyond the workspace. An observer token can stream all DMs. Privacy lives in the actor, not in Relay.
 - Hosted history is kept 30 days. Only post text that already passed the guard.
