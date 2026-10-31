@@ -88,4 +88,13 @@ Start only after the P6 console work is committed. Judges score how effectively 
 4. It must not affect polling, the counters, the cards or the audit panel. Respect prefers-reduced-motion: no animation, color only.
 5. Write the event-to-sequence mapping as a pure function (event in, ordered edges out) with tests. Check beats 1, 2, 3 and 4 in the browser and take screenshots.
 
-Defer: expert-to-expert (C8) edges, until docs/c8-demo.md exists and the feed carries those events.
+Also handle expert-to-expert consults (C8, see docs/c8-demo.md): a feed event whose asker is an `expert-*` agent (for example the Battery row whose asker is expert-actuators) lights that expert, then Relay, then the target expert, and back. Add a test for that mapping.
+
+## P8 · Demo script: the C8 consult and the warmup
+
+Start after I have pulled main, so docs/c8-demo.md and scripts/warmup.ts exist. Read docs/c8-demo.md and the header comment of scripts/warmup.ts first. Do not edit any core-lane file.
+
+1. demo-script.txt, beat 3's first question: update it for CONSULT=1 exactly as docs/c8-demo.md says: the extra paragraph starting "I checked with the battery expert:", sources act-L1 and bat-01, no withheld line, the Battery row on the console timeline whose asker is expert-actuators, Battery's audit row (asker expert-actuators, decision partial, bat-02 withheld), and the counters (repeats served +1, interruptions avoided +2 instead of +1). Add his one-sentence narration line for it.
+2. demo-script.txt, a pre-demo checklist at the top: `CONSULT=1` is in .env (not on the command line), run scripts/demo.sh, run `bun scripts/warmup.ts` once, press Reset, then start. Add a note that real-model answers are 2 to 4 sentences of prose with [id] citations and the wording varies a little between runs, so each beat's check is which pill, which sources and which counters, not exact text.
+3. docs/RUNBOOK.md: add where CONSULT=1 goes and how to check it (`grep listening bridge-actuators.log` ends with `consults battery`), the warmup step, and a failure entry: beat 3 shows no consult, so check .env has CONSULT=1 and restart the actuators bridge.
+4. Keep the Don't list intact. Commit only the files you changed, by path.
