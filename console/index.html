@@ -45,6 +45,13 @@
   button:disabled { opacity: 0.6; cursor: default; }
 
   .counters { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  #redteam-result { margin-top: 12px; padding: 14px 16px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; }
+  #redteam-result.pass { border-color: var(--good); }
+  #redteam-result.fail { border-color: var(--critical); }
+  #redteam-score { font-size: 24px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  #redteam-failures { margin: 8px 0 0; padding-left: 20px; font-size: 14px; color: var(--ink-2); }
+  #redteam-failures:empty { display: none; }
+  #redteam-failures li { overflow-wrap: anywhere; }
   .tile {
     padding: 14px 16px;
     background: var(--panel);
@@ -154,6 +161,7 @@
   <header>
     <h1>Séance owner console</h1>
     <span id="status" role="status">Connecting…</span>
+    <button id="redteam" type="button">Red team</button>
     <button id="reset" type="button">Reset</button>
   </header>
 
@@ -169,6 +177,10 @@
     <div class="tile"><div class="label">Learned</div><div class="value" id="learned">–</div></div>
     <div class="tile"><div class="label">Repeats served</div><div class="value" id="repeats">–</div></div>
   </section>
+  <div id="redteam-result" role="status" hidden>
+    <div id="redteam-score"></div>
+    <ul id="redteam-failures"></ul>
+  </div>
 
   <h2>Escalations</h2>
   <div id="cards"></div>
@@ -222,7 +234,7 @@
   const cardElements = new Map(); // escalationId -> form, so a poll never rebuilds a card
   let renderedFeed = null;
   let renderedAudit = null;
-  let resetFailed = false;
+  let resetProblem = null;
 
   async function getJson(url) {
     const response = await fetch(url, { cache: "no-store" });
@@ -237,9 +249,9 @@
         headers: { "content-type": "application/json" },
         body: body === undefined ? undefined : JSON.stringify(body),
       });
-      return response.ok;
+      return response.ok ? await response.json() : null;
     } catch {
-      return false;
+      return null;
     }
   }
 
@@ -408,7 +420,7 @@
       };
       controls.disabled = true;
       note.textContent = "Sending…";
-      const sent = await post("/owner-reply", body);
+      const sent = Boolean(await post("/owner-reply", body));
       // Sent: the next poll removes the card. Not sent: the owner's text stays for a retry.
       controls.disabled = sent;
       note.textContent = sent ? "Sent" : "Not sent, try again";
@@ -434,12 +446,27 @@
     byId("cards-empty").hidden = cards.length > 0;
   }
 
+  function failureReason({ error, leaked, logged }) {
+    if (error) return error;
+    const reasons = leaked.length > 0 ? [`leaked ${leaked.join(", ")}`] : [];
+    return [...reasons, ...(logged ? [] : ["not in the audit log"])].join("; ");
+  }
+
+  function renderRedteam(state, score, failures = []) {
+    const panel = byId("redteam-result");
+    panel.hidden = false;
+    panel.className = state;
+    byId("redteam-score").textContent = score;
+    byId("redteam-failures").replaceChildren(...failures.map((result) =>
+      cell("li", "", `${result.prompt} (${failureReason(result)})`)));
+  }
+
   function setConnection(up) {
     const status = byId("status");
     document.body.classList.toggle("stale", !up);
-    status.classList.toggle("down", !up || resetFailed);
+    status.classList.toggle("down", !up || resetProblem !== null);
     if (!up) status.textContent = "Disconnected, numbers are stale";
-    else status.textContent = resetFailed ? "Reset failed" : "Live";
+    else status.textContent = resetProblem ?? "Live";
   }
 
   // Reschedules after each poll finishes, so a slow actor cannot stack up requests.
@@ -462,11 +489,25 @@
     setTimeout(poll, POLL_MS);
   }
 
+  byId("redteam").addEventListener("click", async (event) => {
+    const button = event.currentTarget;
+    button.disabled = true;
+    renderRedteam("", "Running the attacks…");
+    const report = await post("/redteam");
+    button.disabled = false;
+    if (!report) return renderRedteam("fail", "Red team could not run");
+    const failed = report.results.filter((result) => !result.blocked);
+    renderRedteam(failed.length === 0 ? "pass" : "fail", `${report.passed} of ${report.total} blocked`, failed);
+  });
+
   byId("reset").addEventListener("click", async (event) => {
     const button = event.currentTarget;
     button.disabled = true;
-    resetFailed = !(await post("/reset"));
+    const result = await post("/reset");
     button.disabled = false;
+    if (!result) resetProblem = "Reset failed";
+    else resetProblem = result.missed.length > 0 ? `Reset, but not cleared: ${result.missed.join(", ")}` : null;
+    if (result) byId("redteam-result").hidden = true;
   });
 
   poll();

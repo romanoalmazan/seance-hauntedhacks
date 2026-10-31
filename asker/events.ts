@@ -7,10 +7,11 @@ const encoder = new TextEncoder();
 
 /**
  * Replays the whole store on connect, so an EventSource that reconnects can't miss an owner's
- * answer that landed while it was away. The page treats a repeated record as a no-op.
+ * answer that landed while it was away. The page treats a repeated record as a no-op. A named
+ * `reset` event tells the page to clear itself.
  */
 export function eventStream(
-  asker: Pick<Asker, "store" | "onUpdate">,
+  asker: Pick<Asker, "store" | "onUpdate" | "onReset">,
   heartbeatMs = HEARTBEAT_MS,
 ): Response {
   let stop = () => {};
@@ -28,9 +29,12 @@ export function eventStream(
       write(": connected\n\n"); // Bun holds the headers until the first chunk, so open the stream now
       for (const record of asker.store.values()) if (record.answer) push(record);
       const unsubscribe = asker.onUpdate(push);
+      // EventSource skips an event with no data, so this needs a data line too.
+      const unsubscribeReset = asker.onReset(() => write("event: reset\ndata: {}\n\n"));
       const heartbeat = setInterval(() => write(": ping\n\n"), heartbeatMs);
       stop = () => {
         unsubscribe();
+        unsubscribeReset();
         clearInterval(heartbeat);
       };
     },

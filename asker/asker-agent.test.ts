@@ -410,3 +410,40 @@ describe("late answers", () => {
     expect(updates).toHaveLength(1);
   });
 });
+
+describe("reset", () => {
+  test("forgets every ask, tells the listeners, and drops a late answer from the last run", async () => {
+    const { connect, sent, deliver } = stubRelay();
+    const asker = await createAsker(PRIYA, connect, { timeoutMs: 20 });
+    await asker.ask("@battery What is the pack peak?");
+    expect(asker.store.size).toBe(1);
+
+    const resets: number[] = [];
+    const updates: AskRecord[] = [];
+    asker.onReset(() => resets.push(asker.store.size));
+    asker.onUpdate((record) => updates.push(record));
+
+    asker.reset();
+
+    expect(resets).toEqual([0]); // cleared before the listeners hear about it
+    await deliver(answerTo(sent[0]!.msg, { provenance: "owner" }), "expert-battery");
+    expect(asker.store.size).toBe(0);
+    expect(updates).toEqual([]);
+  });
+
+  test("the asker still works afterwards, and unsubscribing stops the calls", async () => {
+    const { connect, sent, deliver } = stubRelay();
+    const asker = await createAsker(PRIYA, connect, { timeoutMs: 1000 });
+    let resets = 0;
+    const unsubscribe = asker.onReset(() => (resets += 1));
+    asker.reset();
+    unsubscribe();
+    asker.reset();
+    expect(resets).toBe(1);
+
+    const pending = asker.ask("@battery What is the pack peak?");
+    await sentOnce();
+    await deliver(answerTo(sent[0]!.msg), "expert-battery");
+    expect((await pending).asks[0]?.answer?.text).toBe("first");
+  });
+});

@@ -299,10 +299,21 @@ export function createFakes() {
     },
   };
 
+  /** Stands in for the Guest asker and a real expert: `/raw` refuses and is audited. */
+  async function askGuest(text: string): Promise<string> {
+    const [, team = "", question = ""] = text.match(/^\/raw (\S+) ([\s\S]+)$/) ?? [];
+    await dev.event(
+      { time: new Date().toISOString(), team: team as TeamId, asker: "asker-guest", question, decision: "refused" },
+      { entriesWithheld: ["bat-04", "bat-05"] },
+    );
+    return JSON.stringify({ text: "I can't share that.", asks: [], notice: null });
+  }
+
   return {
     expert: (team: TeamId): ConsoleActorApi => experts[team],
     feed: (): FeedApi => timeline,
     relay,
     dev,
+    askGuest,
   };
 }

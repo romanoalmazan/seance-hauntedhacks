@@ -3,6 +3,7 @@
 import { z } from "zod";
 import { createCards, ownerReplyInput, TEAMS } from "./escalations";
 import { createFakes, type DevHooks } from "./fakes";
+import { askGuest, redteam } from "../scripts/redteam";
 import type { RelayClient } from "../shared/protocol";
 import type { ConsoleActorApi, FeedApi, TeamId } from "../shared/types";
 
@@ -10,6 +11,11 @@ const PORT = 3000;
 // /snapshot carries restricted text and nothing here is authenticated, so stay on loopback.
 const HOSTNAME = "127.0.0.1";
 const FEED_LIMIT = 100;
+// Must outlast POST /redteam, or Bun drops it mid-run (default 10 s): six asks at the asker's 30 s
+// timeout each.
+const IDLE_TIMEOUT_SECONDS = 190;
+const ASKER_URLS = { "asker-priya": "http://127.0.0.1:3001", "asker-guest": "http://127.0.0.1:3002" };
+const ASKER_RESET_TIMEOUT_MS = 2000;
 
 export interface ConsoleDeps {
   expert(team: TeamId): ConsoleActorApi;
@@ -18,6 +24,10 @@ export interface ConsoleDeps {
   relay: RelayClient;
   /** Only the fakes supply this, so the /dev routes do not exist against real actors. */
   dev?: DevHooks;
+  /** Sends one chat line as Guest. Defaults to the Guest asker's POST /ask. */
+  askGuest?(text: string): Promise<string>;
+  /** Clears both chat pages and returns the askers it missed. Defaults to their POST /reset. */
+  resetAskers?(): Promise<string[]>;
 }
 
 const devEventSchema = z.object({
@@ -45,6 +55,16 @@ async function devEvent(req: Request, dev: DevHooks): Promise<Response> {
   const { time, team, asker, question, decision, ...options } = parsed.data;
   await dev.event({ time: time ?? new Date().toISOString(), team, asker, question, decision }, options);
   return json({ ok: true });
+}
+
+async function resetAskers(): Promise<string[]> {
+  const missed = await Promise.all(
+    Object.entries(ASKER_URLS).map(async ([agent, url]) => {
+      const reset = fetch(`${url}/reset`, { method: "POST", signal: AbortSignal.timeout(ASKER_RESET_TIMEOUT_MS) });
+      return (await reset.then(({ ok }) => ok, () => false)) ? [] : [agent];
+    }),
+  );
+  return missed.flat();
 }
 
 export function handler(deps: ConsoleDeps) {
@@ -78,9 +98,18 @@ export function handler(deps: ConsoleDeps) {
       if (pathname === "/reset") {
         await Promise.all([...TEAMS.map((team) => deps.expert(team).reset()), deps.feed().reset()]);
         cards.clear();
-        return json({ ok: true });
+        // The actors are reset by now, so a chat page left uncleared is reported, not a failure.
+        return json({ ok: true, missed: await (deps.resetAskers ?? resetAskers)() });
       }
       if (pathname === "/owner-reply") return ownerReply(req);
+      if (pathname === "/redteam") {
+        return json(
+          await redteam({
+            ask: deps.askGuest ?? askGuest,
+            audit: async (team) => (await deps.expert(team).snapshot()).audit,
+          }),
+        );
+      }
       if (pathname === "/dev/event" && deps.dev) return devEvent(req, deps.dev);
       if (pathname === "/dev/escalate" && deps.dev) {
         return json({ ok: true, escalationId: await deps.dev.escalate() });
@@ -110,6 +139,11 @@ async function realDeps(): Promise<ConsoleDeps> {
 if (import.meta.main) {
   const real = process.env.REAL === "1";
   const deps = real ? await realDeps() : createFakes();
-  const server = Bun.serve({ port: PORT, hostname: HOSTNAME, fetch: handler(deps) });
+  const server = Bun.serve({
+    port: PORT,
+    hostname: HOSTNAME,
+    idleTimeout: IDLE_TIMEOUT_SECONDS,
+    fetch: handler(deps),
+  });
   console.log(`Owner console on ${server.url} (${real ? "real stack" : "fakes"})`);
 }

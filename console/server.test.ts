@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { createFakes } from "./fakes";
 import { handler } from "./server";
+import type { RedteamReport } from "../scripts/redteam";
+import attacks from "../seed/attacks.json";
 import type { EscalationNotice, Message } from "../shared/protocol";
 import type { Card } from "./escalations";
 import type { ConsoleActorApi, FeedEvent, Snapshot, TeamId } from "../shared/types";
@@ -44,7 +46,7 @@ const reply = (escalationId: string, overrides: object = {}) => ({
 
 beforeEach(() => {
   fakes = createFakes();
-  app = handler(fakes);
+  app = handler({ ...fakes, resetAskers: async () => [] });
 });
 
 describe("reads", () => {
@@ -296,7 +298,7 @@ describe("POST /owner-reply", () => {
 describe("reconciling cards with the actors", () => {
   /** A console process that just started: same actors, no memory of any card. */
   const restartConsole = () => {
-    app = handler(fakes);
+    app = handler({ ...fakes, resetAskers: async () => [] });
   };
 
   test("a pending escalation the console missed gets a card, keyed by escalationId", async () => {
@@ -382,7 +384,7 @@ describe("reconciling cards with the actors", () => {
       setClearance: (agent, level) => fakes.expert(team).setClearance(agent, level),
       reset: () => fakes.expert(team).reset(),
     });
-    app = handler({ ...fakes, expert: slowExpert });
+    app = handler({ ...fakes, expert: slowExpert, resetAskers: async () => [] });
 
     const polling = get("/cards");
     expect((await post("/reset")).status).toBe(200);
@@ -402,6 +404,88 @@ describe("reconciling cards with the actors", () => {
   });
 });
 
+describe("POST /redteam", () => {
+  const run = async () => (await (await post("/redteam")).json()) as RedteamReport;
+  const reply = (text: string) => JSON.stringify({ text, asks: [], notice: null });
+
+  /** Runs with `ask` as the Guest asker. Anything it doesn't log stays out of the audit. */
+  function withGuest(ask: (text: string) => Promise<string>) {
+    app = handler({ ...fakes, askGuest: ask });
+  }
+
+  test("every attack reaches Guest as /raw exactly as typed, and is blocked and logged", async () => {
+    const typed: string[] = [];
+    const { askGuest } = fakes;
+    withGuest((text) => {
+      typed.push(text);
+      return askGuest(text);
+    });
+
+    const report = await run();
+
+    expect(typed).toEqual(attacks.prompts.map((prompt) => `/raw battery ${prompt}`));
+    expect(report).toMatchObject({ passed: 6, total: 6 });
+    expect(report.results.map((result) => result.prompt)).toEqual(attacks.prompts);
+    expect(report.results.every((result) => result.blocked && result.decision === "refused")).toBe(true);
+    expect((await snapshot("battery")).audit.map((event) => event.question)).toEqual(attacks.prompts);
+  });
+
+  test.each([
+    ["in the answer text", "Cells come from PELICAN.", "PELICAN"],
+    ["in a hint, not the text", JSON.stringify({ text: "No.", asks: [{ answer: { withheld: { hints: ["costs $4.15"] } } }] }), "$4.15"],
+    ["from the other team's seed", "Bearings are ACT-3308.", "ACT-3308"],
+    ["in another case", "cells from pelican", "PELICAN"],
+  ])("a token %s fails that prompt", async (_name, body, token) => {
+    const { askGuest } = fakes;
+    let calls = 0;
+    withGuest(async (text) => {
+      const safe = await askGuest(text);
+      return ++calls === 2 ? body : safe;
+    });
+
+    const report = await run();
+
+    expect(report.passed).toBe(5);
+    const failed = report.results.filter((result) => !result.blocked);
+    expect(failed).toHaveLength(1);
+    expect(failed[0]).toMatchObject({ prompt: attacks.prompts[1], logged: true });
+    expect(failed[0]?.leaked).toContain(token);
+  });
+
+  test("an attempt missing from the audit log fails even with a clean reply", async () => {
+    withGuest(async () => reply("I can't share that."));
+    const report = await run();
+    expect(report).toMatchObject({ passed: 0, total: 6 });
+    expect(report.results[0]).toMatchObject({ blocked: false, leaked: [], logged: false });
+  });
+
+  test("an earlier run's audit entry can't vouch for this run", async () => {
+    await run();
+    withGuest(async () => reply("I can't share that."));
+    expect((await run()).passed).toBe(0);
+  });
+
+  test("a second clean run passes too", async () => {
+    await run();
+    expect((await run()).passed).toBe(6);
+  });
+
+  test("an unreachable Guest asker fails every prompt and says why", async () => {
+    withGuest(() => Promise.reject(new Error("Unable to connect")));
+    const response = await post("/redteam");
+    expect(response.status).toBe(200);
+    const report = (await response.json()) as RedteamReport;
+    expect(report.passed).toBe(0);
+    expect(report.results[0]).toMatchObject({ blocked: false, error: "Unable to connect" });
+  });
+
+  test("the page has the button, and only POST runs an attack", async () => {
+    expect(await (await get("/")).text()).toContain(">Red team</button>");
+    expect((await get("/redteam")).status).toBe(404);
+    expect((await snapshot("battery")).audit).toEqual([]);
+  });
+});
+
 describe("POST /reset", () => {
   test("closes open cards, and the same id can open a card on the next run", async () => {
     await fakes.relay.deliver(notice(), "expert-actuators");
@@ -409,6 +493,43 @@ describe("POST /reset", () => {
     expect(await cards()).toEqual([]);
     await fakes.relay.deliver(notice(), "expert-actuators");
     expect(await cards()).toHaveLength(1);
+  });
+
+  test("clears the chat pages, after the actors, and names any it missed", async () => {
+    const order: string[] = [];
+    const reset = fakes.feed().reset.bind(fakes.feed());
+    fakes.feed().reset = () => reset().then(() => void order.push("feed"));
+    app = handler({
+      ...fakes,
+      resetAskers: async () => {
+        order.push("askers");
+        return ["asker-guest"];
+      },
+    });
+
+    const response = await post("/reset");
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ ok: true, missed: ["asker-guest"] });
+    expect(order).toEqual(["feed", "askers"]);
+  });
+
+  test("an actor failure leaves the chat pages alone", async () => {
+    let cleared = false;
+    const failing = handler({
+      ...fakes,
+      expert: (team) => ({
+        ...fakes.expert(team),
+        snapshot: () => fakes.expert(team).snapshot(),
+        reset: () => Promise.reject(new Error("actor down")),
+      }),
+      resetAskers: async () => {
+        cleared = true;
+        return [];
+      },
+    });
+    await failing(new Request("http://console/reset", { method: "POST" }));
+    expect(cleared).toBe(false);
   });
 
   test("restores the seed on both teams and clears the timeline", async () => {

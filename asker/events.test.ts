@@ -10,14 +10,21 @@ function record(requestId: string, text: string | null): AskRecord {
 
 function fakeAsker(records: AskRecord[] = []) {
   const listeners = new Set<(r: AskRecord) => void>();
+  const resetListeners = new Set<() => void>();
   return {
     store: new Map(records.map((r) => [r.requestId, r])),
     onUpdate(listener: (r: AskRecord) => void) {
       listeners.add(listener);
       return () => listeners.delete(listener);
     },
+    onReset(listener: () => void) {
+      resetListeners.add(listener);
+      return () => resetListeners.delete(listener);
+    },
     listeners,
+    resetListeners,
     publish: (r: AskRecord) => listeners.forEach((listener) => listener(r)),
+    resetNow: () => resetListeners.forEach((listener) => listener()),
   };
 }
 
@@ -74,11 +81,21 @@ describe("eventStream", () => {
     await reader.cancel();
   });
 
+  test("a reset is a named event with data, which is what EventSource dispatches", async () => {
+    const asker = fakeAsker();
+    const reader = await open(asker);
+    asker.resetNow();
+    expect(await nextChunk(reader)).toBe("event: reset\ndata: {}\n\n");
+    await reader.cancel();
+  });
+
   test("unsubscribes when the page leaves", async () => {
     const asker = fakeAsker();
     const reader = await open(asker);
     expect(asker.listeners.size).toBe(1);
+    expect(asker.resetListeners.size).toBe(1);
     await reader.cancel();
     expect(asker.listeners.size).toBe(0);
+    expect(asker.resetListeners.size).toBe(0);
   });
 });

@@ -38,6 +38,10 @@ export interface Asker {
   ask(text: string, context?: string): Promise<MergedReply>;
   /** Called for every stored answer, late ones included. Returns the unsubscribe function. */
   onUpdate(listener: (record: AskRecord) => void): () => void;
+  /** Forgets every ask, so a late answer from the last run is dropped. */
+  reset(): void;
+  /** Called after each reset. Returns the unsubscribe function. */
+  onReset(listener: () => void): () => void;
   close(): Promise<void>;
 }
 
@@ -114,6 +118,7 @@ export async function createAsker(
   const store = new Map<string, AskRecord>();
   const waiters = new Map<string, () => void>();
   const listeners = new Set<(record: AskRecord) => void>();
+  const resetListeners = new Set<() => void>();
 
   client.onMessage((msg, { sender }) => {
     if (msg.kind !== "answer") return;
@@ -215,6 +220,14 @@ export async function createAsker(
     onUpdate(listener) {
       listeners.add(listener);
       return () => listeners.delete(listener);
+    },
+    reset() {
+      store.clear();
+      for (const listener of resetListeners) listener();
+    },
+    onReset(listener) {
+      resetListeners.add(listener);
+      return () => resetListeners.delete(listener);
     },
     close: () => client.close(),
   };

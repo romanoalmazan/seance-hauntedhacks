@@ -252,7 +252,8 @@
   }
 
   // EventSource reconnects by itself, and the server replays its store when it does.
-  new EventSource("/events").onmessage = (event) => {
+  const events = new EventSource("/events");
+  events.onmessage = (event) => {
     const record = JSON.parse(event.data);
     latest.set(record.requestId, record);
     const part = parts.get(record.requestId);
@@ -260,6 +261,14 @@
     part.replaceWith(renderPart(record));
     log.scrollTop = log.scrollHeight;
   };
+
+  // The console's Reset, so nobody has to refresh this page before a run.
+  events.addEventListener("reset", () => {
+    log.replaceChildren();
+    parts.clear();
+    latest.clear();
+    input.value = "";
+  });
 
   loadDirectory().catch((err) => addBubble("agent failed", `Couldn't load the directory: ${err.message}`));
 </script>

@@ -46,6 +46,13 @@ const server = Bun.serve({
         return Response.json(await asker.ask(body.data.text, body.data.context));
       },
     },
+    // The console's Reset calls this to clear the chat page.
+    "/reset": {
+      POST() {
+        asker.reset();
+        return Response.json({ ok: true });
+      },
+    },
   },
   fetch: () => new Response("Not found", { status: 404 }),
   error(err) {
