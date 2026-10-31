@@ -3,7 +3,7 @@
 import { PROTOCOL_VERSION } from "../shared/protocol";
 import type { Answer, Ask, RelayClient } from "../shared/protocol";
 import type { TeamId } from "../shared/types";
-import { describeDirectory, findTeam, teamInfo } from "./directory";
+import { describeDirectory, DIRECTORY, findTeam, teamInfo } from "./directory";
 import { sanitizeContext, stripPii } from "./sanitize";
 
 export type Connect = (agent: string) => Promise<RelayClient>;
@@ -14,7 +14,10 @@ export interface AskerIdentity {
   team: string;
 }
 
-/** One team's side of a question. A later answer with the same requestId replaces `answer`. */
+/**
+ * One team's side of a question. A later answer with the same requestId replaces `answer`,
+ * except that an owner's answer is final: nothing but another owner answer replaces it.
+ */
 export interface AskRecord {
   requestId: string;
   team: TeamId;
@@ -33,10 +36,22 @@ export interface Asker {
   identity: AskerIdentity;
   store: Map<string, AskRecord>;
   ask(text: string, context?: string): Promise<MergedReply>;
+  /** Called for every stored answer, late ones included. Returns the unsubscribe function. */
+  onUpdate(listener: (record: AskRecord) => void): () => void;
   close(): Promise<void>;
 }
 
 const DEFAULT_TIMEOUT_MS = 30_000;
+
+/**
+ * Marks a raw ask's requestId, for logs and so the fake expert can recognise one. To a real
+ * expert it's an opaque id: nothing changes the text or the contract, so an attack lands as typed.
+ */
+export const RAW_REQUEST_PREFIX = "raw-";
+
+// `/raw <team> <text>`. Everything after the team is kept exactly as typed.
+const RAW = /^\s*\/raw(?:\s+@?(\S+)(?:\s+(\S[\s\S]*))?)?\s*$/i;
+const RAW_USAGE = `Usage: /raw <team> <text>. Teams: ${DIRECTORY.map((t) => t.teamId).join(", ")}.`;
 
 // The lookbehind keeps the "@battery" in dana@battery.com from reading as a mention.
 const MENTION = /(?<![\w.+-])@([a-z][\w-]*)/gi;
@@ -68,9 +83,11 @@ export function parseMentions(text: string): ParsedMentions {
 }
 
 function describeRecord({ team, answer, error }: AskRecord): string {
-  const name = teamInfo(team).displayName;
+  const { displayName: name, ownerName } = teamInfo(team);
   if (!answer) return `${name}: ${error ?? "no answer yet"}`;
-  const lines = [`${name} (${answer.status}): ${answer.text}`];
+  const label =
+    answer.provenance === "owner" ? `${answer.ownerName ?? ownerName}'s answer` : answer.status;
+  const lines = [`${name} (${label}): ${answer.text}`];
   if (answer.sources.length > 0) {
     lines.push(`Sources: ${answer.sources.map((s) => `${s.id} ${s.title}`).join("; ")}`);
   }
@@ -96,14 +113,18 @@ export async function createAsker(
   const client = await connect(identity.agent);
   const store = new Map<string, AskRecord>();
   const waiters = new Map<string, () => void>();
+  const listeners = new Set<(record: AskRecord) => void>();
 
   client.onMessage((msg, { sender }) => {
     if (msg.kind !== "answer") return;
     const record = store.get(msg.requestId);
     // Only the expert this ask went to may answer it. Identity is the Relay sender.
     if (!record || sender !== teamInfo(record.team).address) return;
+    // Deliveries replay, so an old `escalated` can land after the owner's answer.
+    if (record.answer?.provenance === "owner" && msg.provenance !== "owner") return;
     record.answer = msg;
     waiters.get(msg.requestId)?.();
+    for (const listener of listeners) listener(record);
   });
 
   /** Resolves on the first answer or at the timeout. Registered before sending, so no answer can beat it. */
@@ -119,8 +140,13 @@ export async function createAsker(
     });
   }
 
-  async function askTeam(team: TeamId, question: string, context: string): Promise<AskRecord> {
-    const requestId = crypto.randomUUID();
+  async function askTeam(
+    team: TeamId,
+    question: string,
+    context: string,
+    { raw = false }: { raw?: boolean } = {},
+  ): Promise<AskRecord> {
+    const requestId = `${raw ? RAW_REQUEST_PREFIX : ""}${crypto.randomUUID()}`;
     const record: AskRecord = { requestId, team, question, answer: null, error: null };
     store.set(requestId, record);
     const answered = untilAnswered(requestId);
@@ -151,6 +177,15 @@ export async function createAsker(
     identity,
     store,
     async ask(text, context = "") {
+      const raw = text.match(RAW);
+      if (raw) {
+        const [, teamName = "", rawText = ""] = raw;
+        const team = findTeam(teamName)?.teamId;
+        if (!team || !rawText) return noticeOnly(RAW_USAGE);
+        const record = await askTeam(team, rawText, "", { raw: true });
+        return { text: mergeAnswers([record]), asks: [record], notice: null };
+      }
+
       const { teams, unknown, question } = parseMentions(text);
       const unknownNote =
         unknown.length > 0
@@ -176,6 +211,10 @@ export async function createAsker(
         asks,
         notice: unknownNote,
       };
+    },
+    onUpdate(listener) {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
     },
     close: () => client.close(),
   };
