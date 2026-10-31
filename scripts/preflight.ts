@@ -13,7 +13,7 @@ const sh = (cmd: string) => Bun.spawnSync(["sh", "-c", cmd]).stdout.toString().t
 const env = process.env; // Bun loads .env
 
 // 1. Ports up and bound to localhost only
-const PORTS: [number, string][] = [[8787, "Relay engine"], [7100, "Terse dev server"], [3000, "console"], [3001, "Priya asker"], [3002, "Guest asker"]];
+const PORTS: [number, string][] = [[8787, "Relay engine"], [7100, "Terse dev server"], [3000, "console"], [3001, "Priya asker"], [3002, "Robotics asker"]];
 for (const [port, name] of PORTS) {
   const addrs = sh(`lsof -nP -iTCP:${port} -sTCP:LISTEN | awk 'NR>1 {print $9}' | sort -u`).split("\n").filter(Boolean);
   if (!addrs.length) bad(`${name} :${port} is not listening`);
@@ -22,7 +22,7 @@ for (const [port, name] of PORTS) {
 }
 
 // 2. Bridges running and listening (and consulting, when CONSULT=1)
-for (const team of ["battery", "actuators"] as TeamId[]) {
+for (const team of ["software", "battery", "actuators"] as TeamId[]) {
   const running = sh(`pgrep -f "expert-bridge.ts ${team}"`);
   const last = sh(`grep listening bridge-${team}.log 2>/dev/null | tail -1`);
   if (!running) bad(`${team} bridge is not running`);
@@ -56,7 +56,7 @@ if (!env.OPENAI_API_KEY || !env.OPENAI_MODEL) {
 }
 
 // 5. Experts and feed empty (Reset pressed)
-for (const team of ["battery", "actuators"] as TeamId[]) {
+for (const team of ["software", "battery", "actuators"] as TeamId[]) {
   try {
     const s = await expert(team).snapshot();
     const dirty = [
