@@ -126,7 +126,7 @@ export function finalize(s: ExpertState, sender: string, ask: Ask, draft: Draft 
     stats.escalated++;
     answer = {
       ...base, status: "escalated", confidence: draft?.confidence ?? 0, sources: [], escalationId: escalation.id,
-      text: `Not sure. I've asked ${owner}; their answer will come back here.`,
+      text: `Not sure. I asked ${owner}. I'll update this when they answer.`,
     };
   } else if (decision.status === "refused") {
     answer = { ...base, status: "refused", confidence: 1, sources: [], text: "I can't share that at your access level." };

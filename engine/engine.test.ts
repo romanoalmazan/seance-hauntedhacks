@@ -3,7 +3,7 @@ import battery from "../seed/battery.json" with { type: "json" };
 import actuators from "../seed/actuators.json" with { type: "json" };
 import attacks from "../seed/attacks.json" with { type: "json" };
 import type { KnowledgeEntry, Policy } from "../shared/types.js";
-import { clearanceOf, decide, disclose, fakeDraft, guard, looksLikeInjection, retrieve, userPrompt } from "./index.js";
+import { clearanceOf, decide, disclose, fakeDraft, guard, looksLikeInjection, retrieve, userPrompt, withCitations } from "./index.js";
 
 const policy: Policy = {
   clearance: { "asker-priya": 1, "asker-guest": 0 },
@@ -120,5 +120,13 @@ describe("injection phrasing", () => {
       "Does ACT-7 support regenerative braking into the pack?",
       "What current can the pack deliver?",
     ]) expect(looksLikeInjection(q)).toBe(false);
+  });
+});
+
+describe("citations", () => {
+  test("appends ids when the model left them out, keeps inline ones", () => {
+    expect(withCitations("Peak is 40 A.", ["act-01", "act-03"])).toBe("Peak is 40 A. [act-01, act-03]");
+    expect(withCitations("Peak is 40 A [act-01].", ["act-01"])).toBe("Peak is 40 A [act-01].");
+    expect(withCitations("Not sure.", [])).toBe("Not sure.");
   });
 });

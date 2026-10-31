@@ -27,6 +27,12 @@ export function fakeDraft(visible: KnowledgeEntry[]): Draft {
   };
 }
 
+/** If the model left out inline [id] citations, append them so every answer shows its sources. */
+export function withCitations(answer: string, used: string[]): string {
+  if (!used.length || /\[[a-z]+-[a-z0-9]+\]/i.test(answer)) return answer;
+  return `${answer.trim()} [${used.join(", ")}]`;
+}
+
 export function useFake(env: Env = processEnv()): boolean {
   return env.LLM_FAKE === "1" || !env.OPENAI_API_KEY || !env.OPENAI_MODEL;
 }
@@ -45,7 +51,7 @@ export async function draft(
     body: JSON.stringify({
       model: env.OPENAI_MODEL,
       response_format: { type: "json_object" },
-      max_completion_tokens: 400,
+      max_completion_tokens: 300,
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: userPrompt(question, context, visible, team) },
@@ -58,5 +64,6 @@ export async function draft(
   if (!parsed.success) return { answer: "I'm not sure.", usedEntryIds: [], confidence: 0, needsOwner: true };
   // Only keep citations to entries the model was actually shown.
   const ids = new Set(visible.map((e) => e.id));
-  return { ...parsed.data, usedEntryIds: parsed.data.usedEntryIds.filter((id) => ids.has(id)) };
+  const used = parsed.data.usedEntryIds.filter((id) => ids.has(id));
+  return { ...parsed.data, answer: withCitations(parsed.data.answer, used), usedEntryIds: used };
 }
