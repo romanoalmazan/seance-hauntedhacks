@@ -76,7 +76,7 @@ describe("reads", () => {
     expect(view.profile.ownerName).toBe("Dana");
     expect(view.knowledge.find((entry) => entry.id === "bat-04")?.full).toContain("PELICAN");
     expect(view.policy).toEqual({
-      clearance: { "asker-priya": 1, "asker-guest": 0 },
+      clearance: { "asker-priya": 1, "asker-robotics": 0 },
       defaultClearance: 0,
       minMatchScore: 2,
       minConfidence: 0.6,
@@ -719,7 +719,7 @@ describe("POST /reset", () => {
   test("restores the seed on both teams and clears the timeline", async () => {
     await post("/dev/event", event);
     await fakes.expert("battery").setSensitivity("bat-02", "public");
-    await fakes.expert("actuators").setClearance("asker-guest", 1);
+    await fakes.expert("actuators").setClearance("asker-robotics", 1);
 
     expect((await post("/reset")).status).toBe(200);
 
@@ -727,7 +727,7 @@ describe("POST /reset", () => {
     expect(await feed()).toEqual([]);
     expect(battery.stats.asked).toBe(0);
     expect(battery.knowledge.find((entry) => entry.id === "bat-02")?.sensitivity).toBe("internal");
-    expect((await snapshot("actuators")).policy.clearance["asker-guest"]).toBe(0);
+    expect((await snapshot("actuators")).policy.clearance["asker-robotics"]).toBe(0);
   });
 
   test("an actor failure is a 500, not a hang or a false ok", async () => {
