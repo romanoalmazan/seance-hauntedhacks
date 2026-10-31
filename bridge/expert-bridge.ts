@@ -8,8 +8,8 @@ import type { TeamId } from "../shared/types";
 import type { AnswerBody } from "../actors/src/expert-logic";
 
 const team = process.argv[2] as TeamId;
-if (team !== "battery" && team !== "actuators" && team !== "software") {
-  console.error("usage: bun bridge/expert-bridge.ts <battery|actuators|software>");
+if (!["battery", "actuators", "software", "controls", "robotics"].includes(team)) {
+  console.error("usage: bun bridge/expert-bridge.ts <battery|actuators|software|controls|robotics>");
   process.exit(1);
 }
 

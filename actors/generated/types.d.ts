@@ -4,7 +4,7 @@ import { z } from "zod"
 declare const answerSchema: z.ZodObject<
     {
         kind: z.ZodLiteral<"answer">
-        team: z.ZodEnum<["battery", "actuators", "software"]>
+        team: z.ZodEnum<["battery", "actuators", "software", "controls", "robotics"]>
         status: z.ZodEnum<["answered", "partial", "refused", "escalated"]>
         text: z.ZodString
         confidence: z.ZodNumber
@@ -60,7 +60,7 @@ declare const answerSchema: z.ZodObject<
         status: "answered" | "partial" | "refused" | "escalated"
         at: string
         kind: "answer"
-        team: "battery" | "actuators" | "software"
+        team: "battery" | "actuators" | "software" | "controls" | "robotics"
         v: 1
         text: string
         confidence: number
@@ -82,7 +82,7 @@ declare const answerSchema: z.ZodObject<
         status: "answered" | "partial" | "refused" | "escalated"
         at: string
         kind: "answer"
-        team: "battery" | "actuators" | "software"
+        team: "battery" | "actuators" | "software" | "controls" | "robotics"
         v: 1
         text: string
         confidence: number
@@ -122,7 +122,7 @@ declare const askSchema: z.ZodObject<
                 team: string
             }
         >
-        to: z.ZodEnum<["battery", "actuators", "software"]>
+        to: z.ZodEnum<["battery", "actuators", "software", "controls", "robotics"]>
         question: z.ZodString
         context: z.ZodOptional<z.ZodString>
         v: z.ZodLiteral<1>
@@ -141,7 +141,7 @@ declare const askSchema: z.ZodObject<
             human: string
             team: string
         }
-        to: "battery" | "actuators" | "software"
+        to: "battery" | "actuators" | "software" | "controls" | "robotics"
         v: 1
         context?: string | undefined
     },
@@ -155,7 +155,7 @@ declare const askSchema: z.ZodObject<
             human: string
             team: string
         }
-        to: "battery" | "actuators" | "software"
+        to: "battery" | "actuators" | "software" | "controls" | "robotics"
         v: 1
         context?: string | undefined
     }
@@ -346,7 +346,7 @@ type Clearance = 0 | 1 | 2
 type EventKind = Status | "guard_blocked" | "learned"
 type OwnerReply = z.infer<typeof ownerReplySchema>
 type Status = "answered" | "partial" | "refused" | "escalated"
-type TeamId = "battery" | "actuators" | "software"
+type TeamId = "battery" | "actuators" | "software" | "controls" | "robotics"
 type Tier = "public" | "internal" | "restricted"
 
 export {}

@@ -3,6 +3,8 @@
 import actuators from "../seed/actuators.json";
 import battery from "../seed/battery.json";
 import software from "../seed/software.json";
+import controls from "../seed/controls.json";
+import robotics from "../seed/robotics.json";
 import { RAW_REQUEST_PREFIX } from "../asker/asker-agent";
 import { encode, parseMessage, PROTOCOL_VERSION } from "./protocol";
 import type { Answer, Ask, RelayClient } from "./protocol";
@@ -10,7 +12,7 @@ import type { TeamId } from "./types";
 
 type Handler = Parameters<RelayClient["onMessage"]>[0];
 
-const SEEDS: Record<TeamId, { profile: { ownerName: string }; knowledge: { id: string; title: string; full: string; sensitivity: string; releasable: string | null }[] }> = { battery, actuators, software };
+const SEEDS: Record<TeamId, { profile: { ownerName: string }; knowledge: { id: string; title: string; full: string; sensitivity: string; releasable: string | null }[] }> = { battery, actuators, software, controls, robotics };
 const EXPERTS = new Set(["expert-battery", "expert-actuators"]);
 const LATENCY_MS = 20;
 const OWNER_DELAY_MS = 3000;

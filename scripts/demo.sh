@@ -101,9 +101,13 @@ wait_for "Terse dev server" actors-dev.log curl -s -o /dev/null 127.0.0.1:7100
 start bridge-battery.log bun bridge/expert-bridge.ts battery
 start bridge-actuators.log bun bridge/expert-bridge.ts actuators
 start bridge-software.log bun bridge/expert-bridge.ts software
+start bridge-controls.log bun bridge/expert-bridge.ts controls
+start bridge-robotics.log bun bridge/expert-bridge.ts robotics
 wait_for "battery bridge" bridge-battery.log grep -q listening bridge-battery.log
 wait_for "actuators bridge" bridge-actuators.log grep -q listening bridge-actuators.log
 wait_for "software bridge" bridge-software.log grep -q listening bridge-software.log
+wait_for "controls bridge" bridge-controls.log grep -q listening bridge-controls.log
+wait_for "robotics bridge" bridge-robotics.log grep -q listening bridge-robotics.log
 
 echo "Starting the surfaces..."
 export REAL=1

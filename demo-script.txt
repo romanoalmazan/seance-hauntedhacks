@@ -82,8 +82,11 @@ Should appear on Alex's page:
 Should appear on the console:
   Interruptions avoided 2. Repeats served 2.
 Proves: the owner controls who can ask, per team, and it takes effect instantly.
-Optional: on Sam's page type "@battery What current can the pack deliver?" Sam's agent
-asks Battery's agent like anyone's would and gets the public answer at his access level.
+Optional, it works both ways (no hierarchy): on Priya's page type, without an @team,
+  Controller current limit: Set the ACT-7 controller peak current limit to 38 A and allow at most 3 peak events per minute.
+Her agent saves it (con-T1). Share agent context -> tick Software team. On Sam's page:
+  @controls What controller current limit should I use?
+Sam gets it from Priya's agent; Alex asking @controls is refused until Priya shares with Robotics.
 
 
 CLOSE · the audit log

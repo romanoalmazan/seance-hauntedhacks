@@ -17,7 +17,7 @@ const FEED_LIMIT = 100;
 const IDLE_TIMEOUT_SECONDS = 190;
 const ASKER_URLS = { "asker-priya": "http://127.0.0.1:3001", "asker-robotics": "http://127.0.0.1:3002", "asker-sam": "http://127.0.0.1:3003" };
 // The team boxes on a taught entry: which Relay askers belong to which team.
-export const GROUPS = { controls: ["asker-priya"], robotics: ["asker-robotics"] } as const;
+export const GROUPS = { software: ["asker-sam"], controls: ["asker-priya"], robotics: ["asker-robotics"] } as const;
 const ASKER_RESET_TIMEOUT_MS = 2000;
 
 export interface ConsoleDeps {
@@ -37,7 +37,7 @@ export interface ConsoleDeps {
 
 const devEventSchema = z.object({
   time: z.string().datetime().optional(),
-  team: z.enum(["battery", "actuators", "software"]),
+  team: z.enum(["battery", "actuators", "software", "controls", "robotics"]),
   asker: z.string().min(1),
   question: z.string().min(1),
   decision: z.enum(["answered", "partial", "refused", "escalated", "guard_blocked", "learned"]),
@@ -66,7 +66,7 @@ const teachInput = z.object({
 
 const teamAccessInput = z.object({
   team: askSchema.shape.to,
-  group: z.enum(["controls", "robotics"]),
+  group: z.enum(["software", "controls", "robotics"]),
   allowed: z.boolean(),
 });
 

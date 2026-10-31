@@ -5,7 +5,7 @@ import { RelayCast } from "@relaycast/sdk";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-export const AGENTS = ["expert-battery", "expert-actuators", "expert-software", "asker-priya", "asker-robotics", "asker-sam", "asker-guest", "console"] as const;
+export const AGENTS = ["expert-battery", "expert-actuators", "expert-software", "expert-controls", "expert-robotics", "asker-priya", "asker-robotics", "asker-sam", "asker-guest", "console"] as const;
 const TOKENS_PATH = resolve(import.meta.dir, "..", ".relay-tokens.json");
 const baseUrl = process.env.RELAY_BASE_URL || "http://localhost:8787";
 

@@ -11,8 +11,8 @@ import { eventStream } from "./events";
 // `owns`: this person also runs a team's expert. A message to their own agent with no @team is
 // them telling it something (saved via the console's /teach), and they choose who may ask.
 const ASKERS: Record<string, { port: number; owns?: TeamId } & AskerIdentity> = {
-  "asker-priya": { agent: "asker-priya", human: "Priya Raman", team: "Controls", port: 3001 },
-  "asker-robotics": { agent: "asker-robotics", human: "Alex Chen", team: "Robotics", port: 3002 },
+  "asker-priya": { agent: "asker-priya", human: "Priya Raman", team: "Controls", port: 3001, owns: "controls" },
+  "asker-robotics": { agent: "asker-robotics", human: "Alex Chen", team: "Robotics", port: 3002, owns: "robotics" },
   "asker-sam": { agent: "asker-sam", human: "Sam Patel", team: "Software", port: 3003, owns: "software" },
 };
 
@@ -24,8 +24,12 @@ if (!config) {
 }
 const { port, owns, ...identity } = config;
 const CONSOLE = "http://127.0.0.1:3000";
-const GROUPS = { controls: "asker-priya", robotics: "asker-robotics" } as const;
-const shareBody = z.object({ group: z.enum(["controls", "robotics"]), allowed: z.boolean() });
+// Who belongs to which team, for "Share agent context": each owner shares with the other teams.
+const GROUPS = { software: "asker-sam", controls: "asker-priya", robotics: "asker-robotics" } as const;
+type Group = keyof typeof GROUPS;
+const GROUP_LABELS: Record<Group, string> = { software: "Software team", controls: "Controls team", robotics: "Robotics company" };
+const shareBody = z.object({ group: z.enum(["software", "controls", "robotics"]), allowed: z.boolean() });
+const otherGroups = () => (Object.keys(GROUPS) as Group[]).filter((g) => g !== owns);
 
 /** "topic: details" -> title + text; without a colon the first words are the title. */
 function splitTeach(input: string): { title: string; text: string } {
@@ -56,19 +60,19 @@ const server = Bun.serve({
   idleTimeout: 60,
   routes: {
     "/": () => new Response(Bun.file(`${import.meta.dir}/chat.html`)),
-    "/directory": () => Response.json({ me: { ...identity, owns: owns ?? null }, teams: DIRECTORY.filter((t) => t.teamId !== owns) }),
+    "/directory": () => Response.json({ me: { ...identity, owns: owns ?? null }, teams: DIRECTORY.filter((t) => !t.hidden && t.teamId !== owns) }),
     // "Share agent context": which teams may ask this person's own expert.
     "/share": {
       async GET() {
         if (!owns) return Response.json({ error: "this person runs no team expert" }, { status: 404 });
         const snap = await consoleJson(`/snapshot/${owns}`);
         const level = (agent: string) => snap.policy.clearance[agent] ?? snap.policy.defaultClearance;
-        return Response.json({ controls: level(GROUPS.controls) >= 1, robotics: level(GROUPS.robotics) >= 1 });
+        return Response.json(otherGroups().map((g) => ({ group: g, label: GROUP_LABELS[g], allowed: level(GROUPS[g]) >= 1 })));
       },
       async POST(req) {
         if (!owns) return Response.json({ error: "this person runs no team expert" }, { status: 404 });
         const body = shareBody.safeParse(await req.json().catch(() => null));
-        if (!body.success) return Response.json({ error: "Send JSON: { group, allowed }" }, { status: 400 });
+        if (!body.success || body.data.group === owns) return Response.json({ error: "Send JSON: { group, allowed }" }, { status: 400 });
         await consoleJson("/team-access", { team: owns, ...body.data });
         return Response.json({ ok: true });
       },

@@ -22,7 +22,7 @@ for (const [port, name] of PORTS) {
 }
 
 // 2. Bridges running and listening (and consulting, when CONSULT=1)
-for (const team of ["software", "battery", "actuators"] as TeamId[]) {
+for (const team of ["software", "controls", "robotics", "battery", "actuators"] as TeamId[]) {
   const running = sh(`pgrep -f "expert-bridge.ts ${team}"`);
   const last = sh(`grep listening bridge-${team}.log 2>/dev/null | tail -1`);
   if (!running) bad(`${team} bridge is not running`);
@@ -56,7 +56,7 @@ if (!env.OPENAI_API_KEY || !env.OPENAI_MODEL) {
 }
 
 // 5. Experts and feed empty (Reset pressed)
-for (const team of ["software", "battery", "actuators"] as TeamId[]) {
+for (const team of ["software", "controls", "robotics", "battery", "actuators"] as TeamId[]) {
   try {
     const s = await expert(team).snapshot();
     const dirty = [

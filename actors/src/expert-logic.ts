@@ -40,6 +40,8 @@ const TEAM_MENTIONS: Record<TeamId, RegExp> = {
   battery: /\b(battery|bms)\b/i,
   actuators: /\b(actuators?|act-?\d+)\b/i,
   software: /\b(software team)\b/i,
+  controls: /\b(controls team)\b/i,
+  robotics: /\b(robotics team)\b/i,
 };
 
 /** Teams other than `self` named in any of the texts. Pure; exported for tests. */

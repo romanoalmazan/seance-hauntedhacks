@@ -9,6 +9,8 @@ const QUESTIONS: Record<TeamId, string> = {
   battery: "What current can the pack deliver?",
   actuators: "What peak current can ACT-7 draw?",
   software: "What format does the X database need?",
+  controls: "What does the controls team document?",
+  robotics: "What does the robotics team document?",
 };
 
 for (const team of Object.keys(QUESTIONS) as TeamId[]) {

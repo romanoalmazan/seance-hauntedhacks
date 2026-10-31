@@ -8,12 +8,16 @@ import { draft, fakeDraft } from "./vendor/engine/llm.js";
 import battery from "./vendor/seed/battery.json" with { type: "json" };
 import actuators from "./vendor/seed/actuators.json" with { type: "json" };
 import software from "./vendor/seed/software.json" with { type: "json" };
+import controls from "./vendor/seed/controls.json" with { type: "json" };
+import robotics from "./vendor/seed/robotics.json" with { type: "json" };
 import * as L from "./expert-logic.js";
 
 const SEEDS: Record<string, L.SeedFile> = {
   battery: battery as L.SeedFile,
   actuators: actuators as L.SeedFile,
   software: software as L.SeedFile,
+  controls: controls as L.SeedFile,
+  robotics: robotics as L.SeedFile,
 };
 
 function initial(id: string): L.ExpertState {

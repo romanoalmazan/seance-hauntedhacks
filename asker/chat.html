@@ -162,6 +162,7 @@
   .pop-card label { display: flex; gap: 10px; align-items: center; font-weight: 700; cursor: pointer; }
   .pop-card input { width: 20px; height: 20px; accent-color: var(--accent); }
   .pop-note { margin: 0; color: var(--muted); font-size: var(--text-sm); }
+  #share-boxes { display: grid; gap: 10px; }
   .pop-card button { justify-self: end; padding: 8px 18px; border-radius: 8px; border: 0; background: var(--accent); color: var(--on-fill); font: inherit; font-weight: 700; cursor: pointer; }
 </style>
 </head>
@@ -179,8 +180,7 @@
   <div class="pop-card">
     <h2 id="share-title">Share agent context</h2>
     <p class="pop-note">Who can ask your agent? Ticking applies at once. Teams you leave out are told it exists, never what it says.</p>
-    <label><input type="checkbox" data-group="controls"> Controls team</label>
-    <label><input type="checkbox" data-group="robotics"> Robotics company</label>
+    <div id="share-boxes"></div>
     <p id="share-status" class="pop-note" role="status"></p>
     <button id="share-close" type="button">Done</button>
   </div>
@@ -346,30 +346,40 @@
   // Pre-filled for the demo on the page of someone who runs a team expert (Sam).
   const OWNER_PREFILL = "X database ingest format: Send JSON to the X database /ingest endpoint. Each record: device_id (string), ts (ISO-8601, UTC), metric (string), value (number), unit (SI unit string). Batch up to 500 records per POST; gzip bodies over 1 MB.";
   let isOwner = false;
+  let ownsTeam = null;
 
   const pop = document.getElementById("share-pop");
   const shareStatus = document.getElementById("share-status");
+  async function setShare(box) {
+    try {
+      const res = await fetch("/share", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ group: box.dataset.group, allowed: box.checked }) });
+      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error ?? res.status);
+      const label = box.parentElement.textContent.trim();
+      shareStatus.textContent = box.checked ? `${label} can now ask your agent.` : `${label} can no longer ask your agent.`;
+    } catch (err) {
+      box.checked = !box.checked;
+      shareStatus.textContent = `Couldn't change access: ${err.message}`;
+    }
+  }
   async function openShare() {
     shareStatus.textContent = "";
     pop.hidden = false;
+    const boxes = document.getElementById("share-boxes");
     try {
-      const state = await (await fetch("/share")).json();
-      for (const box of pop.querySelectorAll("input")) box.checked = !!state[box.dataset.group];
+      const groups = await (await fetch("/share")).json();
+      boxes.replaceChildren(...groups.map(({ group, label, allowed }) => {
+        const l = el("label", "");
+        const box = document.createElement("input");
+        box.type = "checkbox";
+        box.dataset.group = group;
+        box.checked = allowed;
+        box.addEventListener("change", () => setShare(box));
+        l.append(box, document.createTextNode(` ${label}`));
+        return l;
+      }));
     } catch (err) {
       shareStatus.textContent = `Couldn't load: ${err.message}`;
     }
-  }
-  for (const box of pop.querySelectorAll("input")) {
-    box.addEventListener("change", async () => {
-      try {
-        const res = await fetch("/share", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ group: box.dataset.group, allowed: box.checked }) });
-        if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error ?? res.status);
-        shareStatus.textContent = box.checked ? `${box.parentElement.textContent.trim()} can now ask your agent.` : `${box.parentElement.textContent.trim()} can no longer ask your agent.`;
-      } catch (err) {
-        box.checked = !box.checked;
-        shareStatus.textContent = `Couldn't change access: ${err.message}`;
-      }
-    });
   }
   document.getElementById("share").addEventListener("click", openShare);
   document.getElementById("share-close").addEventListener("click", () => { pop.hidden = true; input.focus(); });
@@ -379,8 +389,9 @@
     const { me, teams } = await (await fetch("/directory")).json();
     if (me.owns) {
       isOwner = true;
+      ownsTeam = me.owns;
       document.getElementById("share").hidden = false;
-      input.value = OWNER_PREFILL;
+      if (me.owns === "software") input.value = OWNER_PREFILL;
       fit();
       input.placeholder = "Tell your agent something, or ask a team with @";
       const empty = document.getElementById("empty");
@@ -422,7 +433,7 @@
     log.replaceChildren();
     parts.clear();
     latest.clear();
-    input.value = isOwner ? OWNER_PREFILL : "";
+    input.value = ownsTeam === "software" ? OWNER_PREFILL : "";
     fit();
     pop.hidden = true;
   });
