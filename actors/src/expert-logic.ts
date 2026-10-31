@@ -13,7 +13,8 @@ export const AUDIT_CAP = 200;
 export interface SeedFile { profile: Snapshot["profile"]; knowledge: KnowledgeEntry[]; policy?: Policy }
 
 export const DEMO_POLICY: Policy = {
-  clearance: { "asker-priya": 1, "asker-guest": 0 },
+  // expert-actuators stays public-only: whatever it learns from Battery can be relayed to any asker.
+  clearance: { "asker-priya": 1, "asker-guest": 0, "expert-actuators": 0 },
   defaultClearance: 0, minMatchScore: 2, minConfidence: 0.6, allowAccessRequests: true,
 };
 const HANDLED_CAP = 500;

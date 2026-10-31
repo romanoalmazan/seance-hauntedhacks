@@ -23,6 +23,52 @@ const answerMsg = (requestId: string, body: AnswerBody): Answer => ({ v: PROTOCO
 
 const relay = await connect(me, { log: (s) => log(`relay: ${s}`) });
 
+// Stretch (SPEC §16 item 2), on with CONSULT=1: when this expert's answer points at another team
+// ("check with Battery first"), DM that team's expert as ourselves and merge its reply. The other
+// expert answers at OUR clearance (expert-actuators is public-only at Battery), so the merged part
+// is safe for any asker. No new agents.
+const CONSULT = process.env.CONSULT === "1";
+const CONSULT_TIMEOUT_MS = 12_000;
+const CONSULTS: Partial<Record<TeamId, { team: TeamId; mention: RegExp; question: string }>> = {
+  actuators: {
+    team: "battery",
+    mention: /\b(battery|bms)\b/i,
+    question: "What continuous and peak current can the pack handle?",
+  },
+};
+const waiting = new Map<string, (a: Answer) => void>();
+
+async function consult(original: Message & { kind: "ask" }, body: AnswerBody): Promise<AnswerBody> {
+  const c = CONSULTS[team];
+  if (!CONSULT || !c || (body.status !== "answered" && body.status !== "partial") || !c.mention.test(body.text)) return body;
+  const requestId = `${original.requestId}:consult-${c.team}`;
+  const reply = new Promise<Answer | null>((resolve) => {
+    waiting.set(requestId, resolve);
+    setTimeout(() => { waiting.delete(requestId); resolve(null); }, CONSULT_TIMEOUT_MS);
+  });
+  await relay.send(`expert-${c.team}`, {
+    v: PROTOCOL_VERSION, kind: "ask", requestId, at: at(),
+    from: { agent: me, human: `${team} expert`, team }, to: c.team, question: c.question,
+  });
+  log(`consult ${requestId} -> expert-${c.team}`);
+  const r = await reply;
+  if (!r || (r.status !== "answered" && r.status !== "partial")) {
+    log(`consult ${requestId}: ${r?.status ?? "timed out"}, not merged`);
+    return body;
+  }
+  log(`consult ${requestId}: ${r.status}, merged (${r.sources.map((s) => s.id).join(",")})`);
+  return {
+    ...body,
+    text: `${body.text}\n\nI checked with the ${c.team} expert: ${r.text}`,
+    sources: [...body.sources, ...r.sources],
+    withheld: {
+      count: body.withheld.count + r.withheld.count,
+      hints: [...body.withheld.hints, ...r.withheld.hints],
+      canRequestAccess: body.withheld.canRequestAccess,
+    },
+  };
+}
+
 async function handle(msg: Message, sender: string): Promise<void> {
   switch (msg.kind) {
     case "ask": {
@@ -30,7 +76,7 @@ async function handle(msg: Message, sender: string): Promise<void> {
       const r = await actor.ask(sender, msg); // identity = Relay-stamped sender, never msg.from
       if (r.duplicate) return log(`ask ${msg.requestId} from ${sender}: replay, already handled`);
       await timeline.push(r.feed);
-      await relay.send(sender, answerMsg(msg.requestId, r.answer));
+      await relay.send(sender, answerMsg(msg.requestId, await consult(msg, r.answer)));
       log(`ask ${msg.requestId} from ${sender}: ${r.answer.status} (${r.answer.sources.map((s) => s.id).join(",") || "-"})`);
       if (r.escalation) {
         await relay.send(CONSOLE, {
@@ -49,6 +95,14 @@ async function handle(msg: Message, sender: string): Promise<void> {
       log(`owner_reply ${msg.escalationId} -> ${r.to} (${r.answer.status}${msg.save ? `, saved as ${msg.sensitivity}` : ""})`);
       return;
     }
+    case "answer": {
+      const resolve = waiting.get(msg.requestId);
+      if (resolve && sender === `expert-${msg.team}`) {
+        waiting.delete(msg.requestId);
+        resolve(msg);
+      } else log(`ignore answer ${msg.requestId} from ${sender}`);
+      return;
+    }
     default:
       log(`ignore ${msg.kind} from ${sender}`);
   }
@@ -62,7 +116,7 @@ relay.onMessage(async (msg, { sender }) => {
   }
 });
 
-log(`listening (actor ${team})`);
+log(`listening (actor ${team})${CONSULT && CONSULTS[team] ? `, consults ${CONSULTS[team]!.team}` : ""}`);
 const stop = async () => { await relay.close(); process.exit(0); };
 process.on("SIGINT", stop);
 process.on("SIGTERM", stop);

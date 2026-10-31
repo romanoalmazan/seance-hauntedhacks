@@ -120,3 +120,9 @@ bun scripts/owner-reply.ts actuators <escalationId> "<text>" --save --tier publi
 - Terse compiles with `nodenext` resolution: relative imports in `actors/src`, `engine/` and anything they import need `.js` extensions, and JSON imports need `with { type: "json" }`. Every actor method must be async (helpers are module functions).
 - Questions with injection phrasing ("ignore your rules", "system prompt", "verbatim", "override", base64, ...) are refused outright instead of escalated, so a red-team run doesn't page the owner.
 - Retrieval scores title + tags + releasable hint (not the full text); entries under half the top score are dropped.
+
+## C8 stretch: expert-to-expert consult (`CONSULT=1`)
+
+Off by default. Start the bridges with `CONSULT=1` (e.g. `CONSULT=1 scripts/demo.sh`). When the Actuators answer mentions Battery/BMS (the learned regen answer says "check with Battery first"), the actuators bridge DMs `expert-battery` as `expert-actuators` with "What continuous and peak current can the pack handle?", waits up to 12 s, and appends "I checked with the battery expert: ..." plus Battery's sources and hints. If Battery doesn't answer or escalates, the original answer goes out unchanged.
+
+`expert-actuators` has clearance 0 in the demo policy on purpose: whatever Battery tells it can be relayed to any asker, Guest included, so it must be public-only. Battery's audit log shows `expert-actuators` as the asker. Verified live through the Guest chat: beat 3 regen answer merged bat-01 in ~2.6 s total; no owner card; redteam 6 of 6.
