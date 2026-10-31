@@ -149,13 +149,18 @@ class FakeExpert implements ConsoleActorApi {
     this.state.pending = [...this.state.pending, escalation];
   }
 
-  /** Stands in for the actor's ownerReply. Nothing is learned unless Save was ticked. */
+  /**
+   * Stands in for the actor's ownerReply. Nothing is learned unless Save was ticked. Like the
+   * actor, it keeps the escalation in `pending`, marked answered.
+   */
   ownerReply(reply: OwnerReply): void {
     const escalation = this.state.pending.find((pending) => pending.id === reply.escalationId);
-    if (!escalation) return;
+    if (escalation?.status !== "pending") return;
 
     const stats = this.state.stats;
-    this.state.pending = this.state.pending.filter((pending) => pending !== escalation);
+    this.state.pending = this.state.pending.map((pending) =>
+      pending === escalation ? { ...pending, status: "answered" } : pending,
+    );
     this.state.stats = {
       ...stats,
       escalated: stats.escalated + 1,
@@ -230,8 +235,11 @@ export interface DevEventOptions {
 export interface DevHooks {
   /** Pushes the event, bumps that team's stats and writes its audit event. */
   event(event: FeedEvent, options?: DevEventOptions): Promise<void>;
-  /** Delivers the beat 2 notice through the fake relay. Returns the new escalation's id. */
-  escalate(): Promise<string>;
+  /**
+   * Opens the beat 2 escalation and delivers its notice through the fake relay, unless `notify`
+   * is false, which stands for a console that missed it. Returns the new escalation's id.
+   */
+  escalate(options?: { notify?: boolean }): Promise<string>;
 }
 
 /** One isolated world: an expert per team, one feed, the relay, and the dev hooks that drive them. */
@@ -262,7 +270,7 @@ export function createFakes() {
       });
     },
 
-    async escalate() {
+    async escalate({ notify = true } = {}) {
       escalations += 1;
       const requestId = `req-${escalations}`;
       const escalation: Escalation = {
@@ -274,17 +282,19 @@ export function createFakes() {
         status: "pending",
       };
       experts.actuators.escalate(escalation);
-      await relay.deliver(
-        {
-          v: PROTOCOL_VERSION,
-          kind: "escalation_notice",
-          requestId,
-          at: new Date().toISOString(),
-          teamId: "actuators",
-          escalation,
-        },
-        "expert-actuators",
-      );
+      if (notify) {
+        await relay.deliver(
+          {
+            v: PROTOCOL_VERSION,
+            kind: "escalation_notice",
+            requestId,
+            at: new Date().toISOString(),
+            teamId: "actuators",
+            escalation,
+          },
+          "expert-actuators",
+        );
+      }
       return escalation.id;
     },
   };

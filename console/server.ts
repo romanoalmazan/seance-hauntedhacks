@@ -1,7 +1,7 @@
 // Owner console server. The page polls; there is no WebSocket.
 // Run: bun console/server.ts. REAL=1 uses the real actors and Relay (see docs/RUNBOOK.md); otherwise fakes.
 import { z } from "zod";
-import { createCards, ownerReplyInput } from "./escalations";
+import { createCards, ownerReplyInput, TEAMS } from "./escalations";
 import { createFakes, type DevHooks } from "./fakes";
 import type { RelayClient } from "../shared/protocol";
 import type { ConsoleActorApi, FeedApi, TeamId } from "../shared/types";
@@ -10,7 +10,6 @@ const PORT = 3000;
 // /snapshot carries restricted text and nothing here is authenticated, so stay on loopback.
 const HOSTNAME = "127.0.0.1";
 const FEED_LIMIT = 100;
-const TEAMS: readonly TeamId[] = ["battery", "actuators"];
 
 export interface ConsoleDeps {
   expert(team: TeamId): ConsoleActorApi;
@@ -50,6 +49,7 @@ async function devEvent(req: Request, dev: DevHooks): Promise<Response> {
 
 export function handler(deps: ConsoleDeps) {
   const cards = createCards(deps.relay, deps.expert);
+  cards.reconcile().catch((error) => console.warn("[console] startup reconcile failed:", error));
 
   async function ownerReply(req: Request): Promise<Response> {
     const parsed = ownerReplyInput.safeParse(await req.json().catch(() => null));
@@ -66,7 +66,10 @@ export function handler(deps: ConsoleDeps) {
     if (req.method === "GET") {
       if (pathname === "/") return new Response(Bun.file(`${import.meta.dir}/index.html`));
       if (pathname === "/feed") return json(await deps.feed().recent(FEED_LIMIT));
-      if (pathname === "/cards") return json(cards.list());
+      if (pathname === "/cards") {
+        await cards.reconcile();
+        return json(cards.list());
+      }
       const team = pathname.match(/^\/snapshot\/([^/]+)$/)?.[1];
       if (isTeam(team)) return json(await deps.expert(team).snapshot());
     }

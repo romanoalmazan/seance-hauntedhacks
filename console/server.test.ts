@@ -3,7 +3,7 @@ import { createFakes } from "./fakes";
 import { handler } from "./server";
 import type { EscalationNotice, Message } from "../shared/protocol";
 import type { Card } from "./escalations";
-import type { FeedEvent, Snapshot } from "../shared/types";
+import type { ConsoleActorApi, FeedEvent, Snapshot, TeamId } from "../shared/types";
 
 let fakes: ReturnType<typeof createFakes>;
 let app: (req: Request) => Promise<Response>;
@@ -236,7 +236,7 @@ describe("POST /owner-reply", () => {
     await post("/owner-reply", reply("esc-1"));
 
     const view = await snapshot("actuators");
-    expect(view.pending).toEqual([]);
+    expect(view.pending.map((escalation) => escalation.status)).toEqual(["answered"]);
     expect(view.stats).toMatchObject({ escalated: 1, learned: 1 });
     expect(view.audit.at(-1)).toMatchObject({
       asker: "asker-priya",
@@ -293,6 +293,115 @@ describe("POST /owner-reply", () => {
   });
 });
 
+describe("reconciling cards with the actors", () => {
+  /** A console process that just started: same actors, no memory of any card. */
+  const restartConsole = () => {
+    app = handler(fakes);
+  };
+
+  test("a pending escalation the console missed gets a card, keyed by escalationId", async () => {
+    const id = await fakes.dev.escalate({ notify: false });
+    expect(await cards()).toEqual([
+      {
+        escalationId: id,
+        requestId: "req-1",
+        team: "actuators",
+        asker: "asker-priya",
+        question: "Does ACT-7 support regenerative braking into the pack?",
+        reason: "no_knowledge",
+      },
+    ]);
+  });
+
+  test("a restart keeps the open card, and it can still be answered", async () => {
+    await post("/dev/escalate");
+    restartConsole();
+    expect(await cards()).toHaveLength(1);
+    expect((await post("/owner-reply", reply("esc-1"))).status).toBe(200);
+    expect(fakes.relay.sent).toHaveLength(1);
+    expect(await cards()).toEqual([]);
+  });
+
+  test("a notice and the reconcile for one escalation make one card", async () => {
+    await fakes.dev.escalate({ notify: false });
+    await cards();
+    await fakes.relay.deliver({ ...notice("esc-1"), requestId: "req-1" }, "expert-actuators");
+    expect(await cards()).toHaveLength(1);
+  });
+
+  test("an answered escalation does not bring a card back, even after a restart", async () => {
+    await post("/dev/escalate");
+    await post("/owner-reply", reply("esc-1"));
+    expect(await cards()).toEqual([]);
+    restartConsole();
+    expect(await cards()).toEqual([]);
+  });
+
+  test("a notice replayed after a restart can't reopen an answered escalation", async () => {
+    await post("/dev/escalate");
+    await post("/owner-reply", reply("esc-1"));
+    restartConsole();
+    await fakes.relay.deliver(notice("esc-1"), "expert-actuators");
+    expect(await cards()).toEqual([]);
+  });
+
+  test("beat 2½: a reply waiting in Relay doesn't reopen the card while the actor says pending", async () => {
+    await post("/dev/escalate");
+    fakes.relay.send = async () => {}; // the bridge is down, so the actor doesn't hear the reply
+    await post("/owner-reply", reply("esc-1"));
+    expect((await snapshot("actuators")).pending[0]?.status).toBe("pending");
+    expect(await cards()).toEqual([]);
+  });
+
+  test("an escalation answered elsewhere closes its open card", async () => {
+    await post("/dev/escalate");
+    await fakes.relay.send("expert-actuators", {
+      v: 1,
+      kind: "owner_reply",
+      requestId: "req-1",
+      at: "2026-10-31T12:00:00.000Z",
+      escalationId: "esc-1",
+      ownerName: "Marcus",
+      text: "Sent from a script.",
+      save: false,
+      sensitivity: "public",
+      tags: [],
+    });
+    expect(await cards()).toEqual([]);
+  });
+
+  test("a read that straddles a Reset doesn't bring the old card back", async () => {
+    await fakes.dev.escalate({ notify: false });
+    const before = await fakes.expert("actuators").snapshot();
+
+    let release = () => {};
+    const gate = new Promise<void>((resolve) => (release = resolve));
+    const slowExpert = (team: TeamId): ConsoleActorApi => ({
+      snapshot: () => gate.then(() => (team === "actuators" ? before : fakes.expert(team).snapshot())),
+      setSensitivity: (entryId, tier) => fakes.expert(team).setSensitivity(entryId, tier),
+      setClearance: (agent, level) => fakes.expert(team).setClearance(agent, level),
+      reset: () => fakes.expert(team).reset(),
+    });
+    app = handler({ ...fakes, expert: slowExpert });
+
+    const polling = get("/cards");
+    expect((await post("/reset")).status).toBe(200);
+    release();
+    expect(await (await polling).json()).toEqual([]);
+  });
+
+  test("an actor failure during a poll is a 500, and the startup reconcile doesn't crash", async () => {
+    const down = handler({
+      ...fakes,
+      expert: (team) => ({
+        ...fakes.expert(team),
+        snapshot: () => Promise.reject(new Error("actor down")),
+      }),
+    });
+    expect((await down(new Request("http://console/cards"))).status).toBe(500);
+  });
+});
+
 describe("POST /reset", () => {
   test("closes open cards, and the same id can open a card on the next run", async () => {
     await fakes.relay.deliver(notice(), "expert-actuators");
@@ -319,7 +428,11 @@ describe("POST /reset", () => {
   test("an actor failure is a 500, not a hang or a false ok", async () => {
     const failing = handler({
       ...fakes,
-      expert: (team) => ({ ...fakes.expert(team), reset: () => Promise.reject(new Error("actor down")) }),
+      expert: (team) => ({
+        ...fakes.expert(team),
+        snapshot: () => fakes.expert(team).snapshot(),
+        reset: () => Promise.reject(new Error("actor down")),
+      }),
     });
     const response = await failing(new Request("http://console/reset", { method: "POST" }));
     expect(response.status).toBe(500);
