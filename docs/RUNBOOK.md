@@ -28,7 +28,8 @@ The operator's word-for-word script is `demo-script.txt`.
 1. **Consult.** Add the line `CONSULT=1` to `.env`. Don't put it on the command line: Bun loads `.env` for every bridge start, so only there does it survive the beat 2½ hand restart. Without it, beat 3 has no expert-to-expert consult. See `docs/c8-demo.md`.
 2. **Start.** Run `scripts/demo.sh`, then check it: `grep listening bridge-actuators.log` ends with `consults battery`. After a hand restart the log is appended to, so read the last line.
 3. **Warm up.** Run `bun scripts/warmup.ts` once. It makes one call per expert through the actor, so the first demo answer isn't the slow one, then resets the experts and the feed.
-4. **Reset.** Press **Reset** on the console, then start the demo.
+4. **Reset.** Press **Reset** on the console.
+5. **Preflight.** Run `bun scripts/preflight.ts`. It prints ok or FAIL per line and exits 1 on any FAIL: the five ports on `127.0.0.1`, both bridges listening (and "consults battery"), the OpenAI key and model set with a real call under 3 seconds, experts and feed empty, and `.env` readable only by you. Fix any FAIL, rerun it, then start the demo.
 
 ## Most likely failures
 
@@ -48,6 +49,7 @@ The first three are the likely ones from SPEC §15. The stack already runs on it
 ```sh
 bun install
 [ -f .env ] || cp .env.example .env
+chmod 600 .env   # .env holds the keys; preflight flags a world-readable one
 ln -sf ../.env actors/.env
 ```
 
@@ -98,7 +100,7 @@ Each server prints which mode it is in: `using the real Relay`, or `(real stack)
 
 ### 4. Before every run
 
-Press **Reset** on the console. See "Start, reset, stop" above.
+Press **Reset** on the console, then run `bun scripts/preflight.ts` and wait for all ok. See "Start, reset, stop" above.
 
 ### Beat 2½ by hand
 

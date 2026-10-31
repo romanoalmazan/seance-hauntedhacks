@@ -18,11 +18,13 @@ Pre-demo checklist, once, from the repo root
   3. Run bun scripts/warmup.ts once. The first real answers are then not the slow
      ones. It ends with "Warm. Experts and feed reset."
   4. Open a terminal at the repo root for beat 2½.
-  5. Press Reset on the console, then start.
+  5. Press Reset on the console.
+  6. Run bun scripts/preflight.ts. Every line must say ok. If any line says FAIL,
+     fix it before you start; docs/RUNBOOK.md has the fixes. Then start.
 
 Before every run
   Press Reset on the console. Both chats go empty by themselves, and the counters
-  read 0. Don't reload anything.
+  read 0. Don't reload anything. Then run bun scripts/preflight.ts: every line ok.
   If the top of the console says "Reset, but not cleared", that chat's server is
   down. See docs/RUNBOOK.md.
 
