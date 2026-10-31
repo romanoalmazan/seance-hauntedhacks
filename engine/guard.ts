@@ -1,7 +1,7 @@
 // Output guard (SPEC §7): scan the finished answer for protected tokens of every entry
 // the asker cannot see. Normalized = lowercase, spaces and punctuation stripped.
-import type { Clearance, KnowledgeEntry } from "../shared/types";
-import { canSee } from "./disclosure";
+import type { Clearance, KnowledgeEntry } from "../shared/types.js";
+import { canSee } from "./disclosure.js";
 
 export function normalize(s: string): string {
   return s.toLowerCase().replace(/[^a-z0-9]+/g, "");

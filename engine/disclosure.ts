@@ -1,6 +1,8 @@
 // Split retrieved entries by the asker's clearance (SPEC §6). Hidden entries contribute only their hint.
-import { TIER_RANK, type Clearance, type KnowledgeEntry, type Policy } from "../shared/types";
-import type { Scored } from "./retrieve";
+import type { Clearance, KnowledgeEntry, Policy, Tier } from "../shared/types.js";
+
+export const TIER_RANK: Record<Tier, Clearance> = { public: 0, internal: 1, restricted: 2 };
+import type { Scored } from "./retrieve.js";
 
 export interface Disclosure {
   visible: KnowledgeEntry[];

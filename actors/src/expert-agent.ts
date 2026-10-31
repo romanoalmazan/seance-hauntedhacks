@@ -1,0 +1,98 @@
+// Terse shell over expert-logic.ts (SPEC §9). One actor per team; the actor id is the teamId.
+// Every mutation goes through a pure function and the result is reassigned field by field,
+// because a persisted array only saves on reassignment.
+import { Actor, Interleave, Persisted } from "terse-sdk/actor";
+import type { Clearance, Snapshot, Tier } from "../../shared/types.js";
+import type { Ask, OwnerReply } from "../../shared/protocol.js";
+import { draft } from "../../engine/llm.js";
+import battery from "../../seed/battery.json" with { type: "json" };
+import actuators from "../../seed/actuators.json" with { type: "json" };
+import * as L from "./expert-logic.js";
+
+const SEEDS: Record<string, L.SeedFile> = {
+  battery: battery as L.SeedFile,
+  actuators: actuators as L.SeedFile,
+};
+
+function initial(id: string): L.ExpertState {
+  const s = SEEDS[id];
+  if (!s) throw new Error(`no seed for actor id "${id}" (expected battery or actuators)`);
+  return L.fromSeed(s);
+}
+
+// Module functions, not methods: the Terse runtime treats every method as RPC and requires it async.
+function read(a: ExpertAgent): L.ExpertState {
+  return {
+    profile: a.profile, knowledge: a.knowledge, policy: a.policy, pending: a.pending,
+    audit: a.audit, stats: a.stats, handled: a.handled,
+  };
+}
+
+function write(a: ExpertAgent, s: L.ExpertState): void {
+  a.profile = s.profile;
+  a.knowledge = s.knowledge;
+  a.policy = s.policy;
+  a.pending = s.pending;
+  a.audit = s.audit;
+  a.stats = s.stats;
+  a.handled = s.handled;
+}
+
+export class ExpertAgent extends Actor {
+  @Persisted profile: Snapshot["profile"] = initial(this.id).profile;
+  @Persisted knowledge: Snapshot["knowledge"] = initial(this.id).knowledge;
+  @Persisted policy: Snapshot["policy"] = initial(this.id).policy;
+  @Persisted pending: Snapshot["pending"] = [];
+  @Persisted audit: Snapshot["audit"] = [];
+  @Persisted stats: Snapshot["stats"] = initial(this.id).stats;
+  @Persisted handled: L.ExpertState["handled"] = [];
+
+  async seed(): Promise<void> {
+    write(this, initial(this.id));
+  }
+
+  async reset(): Promise<void> {
+    write(this, initial(this.id));
+  }
+
+  async snapshot(): Promise<Snapshot> {
+    return L.snapshot(read(this));
+  }
+
+  async setSensitivity(entryId: string, tier: Tier): Promise<void> {
+    write(this, L.setSensitivity(read(this), entryId, tier));
+  }
+
+  async setClearance(agent: string, level: Clearance): Promise<void> {
+    write(this, L.setClearance(read(this), agent, level));
+  }
+
+  /**
+   * prepare -> model draft -> guard/decide/log, all inside the actor, so text never leaves it.
+   * `sender` is the Relay-stamped agent name; the bridge passes it, never anything from the body.
+   * @Interleave lets other calls run during the model call; finalize runs on the state as it is
+   * after the await, and re-checks requestId, so concurrent calls can't clobber each other.
+   */
+  @Interleave
+  async ask(sender: string, ask: Ask): Promise<L.AskResult> {
+    const p = L.prepare(read(this), sender, ask);
+    let d = null;
+    if (p.needsDraft) {
+      try {
+        d = await draft(p.question, p.context, p.visible);
+      } catch (err) {
+        console.error("[expert] model call failed:", (err as Error).message);
+        d = null; // decide() escalates without a draft
+      }
+    }
+    const { state, result } = L.finalize(read(this), sender, ask, d);
+    write(this, state);
+    return result;
+  }
+
+  async ownerReply(reply: OwnerReply): Promise<L.OwnerReplyResult> {
+    const { state, result } = L.ownerReply(read(this), reply);
+    write(this, state);
+    return result;
+  }
+}

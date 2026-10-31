@@ -1,5 +1,5 @@
 // System prompt (SPEC §4 step 3). Only visible entries are ever passed in.
-import type { KnowledgeEntry } from "../shared/types";
+import type { KnowledgeEntry } from "../shared/types.js";
 
 export const SYSTEM_PROMPT = [
   "You are a team's expert agent at Acme Robotics. Answer the question using ONLY the knowledge entries provided.",

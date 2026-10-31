@@ -1,10 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import battery from "../seed/battery.json";
-import actuators from "../seed/actuators.json";
-import type { SeedFile } from "../shared/types";
-import type { Ask, OwnerReply } from "../shared/protocol";
-import { fakeDraft } from "../engine";
-import * as X from "./expert-logic";
+import battery from "../../seed/battery.json" with { type: "json" };
+import actuators from "../../seed/actuators.json" with { type: "json" };
+import type { Ask, OwnerReply } from "../../shared/protocol.js";
+import { fakeDraft } from "../../engine/index.js";
+import * as X from "./expert-logic.js";
+type SeedFile = X.SeedFile;
 
 const PRIYA = "asker-priya", GUEST = "asker-guest";
 const REGEN = "Does ACT-7 support regenerative braking into the pack?";

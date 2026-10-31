@@ -1,7 +1,7 @@
 // The four outcomes (SPEC §7), as a pure function. Deterministic checks first; confidence is a rough extra signal.
-import type { Policy, Status } from "../shared/types";
-import type { Disclosure } from "./disclosure";
-import type { Draft } from "./llm";
+import type { Policy, Status } from "../shared/types.js";
+import type { Disclosure } from "./disclosure.js";
+import type { Draft } from "./llm.js";
 
 export type Decision =
   | { status: "answered" | "partial"; }

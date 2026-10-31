@@ -1,6 +1,6 @@
-// Keyword-overlap retrieval (SPEC §4 step 2). Scores on title + tags only, so that
-// incidental words in the full text (e.g. "pack" in bat-05) don't pull in unrelated entries.
-import type { KnowledgeEntry } from "../shared/types";
+// Keyword-overlap retrieval (SPEC §4 step 2). Scores on title + tags + releasable hint, not the
+// full text, so incidental words in the full text (e.g. "pack" in bat-05) don't pull in unrelated entries.
+import type { KnowledgeEntry } from "../shared/types.js";
 
 export interface Scored { entry: KnowledgeEntry; score: number }
 
@@ -31,7 +31,7 @@ export function tokens(text: string): Set<string> {
 
 export function score(question: string, entry: KnowledgeEntry): number {
   const q = tokens(question);
-  const e = tokens([entry.title, ...entry.tags].join(" "));
+  const e = tokens([entry.title, ...entry.tags, entry.releasable ?? ""].join(" "));
   let n = 0;
   for (const t of q) if (e.has(t)) n++;
   return n;

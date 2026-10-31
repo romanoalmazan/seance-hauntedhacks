@@ -2,13 +2,20 @@
 // the Terse actor shell reassigns its @Persisted fields from it, which also sidesteps the
 // "push isn't persisted" bug. No Terse or Relay imports here.
 import type {
-  AuditEvent, Clearance, Escalation, EventKind, FeedEvent, KnowledgeEntry, Policy, Profile, SeedFile,
-  Snapshot, Stats, Tier,
-} from "../shared/types";
-import type { Answer, Ask, OwnerReply } from "../shared/protocol";
-import { clearanceOf, decide, disclose, guard, preDecide, retrieve, type Draft } from "../engine";
+  AuditEvent, Clearance, Escalation, EventKind, FeedEvent, KnowledgeEntry, Policy, Snapshot, Stats, Tier,
+} from "../../shared/types.js";
+import type { Answer, Ask, OwnerReply } from "../../shared/protocol.js";
+import { clearanceOf, decide, disclose, guard, preDecide, retrieve, type Draft } from "../../engine/index.js";
 
 export const AUDIT_CAP = 200;
+
+/** seed/<team>.json. The seed carries no policy, so the demo policy (SPEC §9) is supplied here. */
+export interface SeedFile { profile: Snapshot["profile"]; knowledge: KnowledgeEntry[]; policy?: Policy }
+
+export const DEMO_POLICY: Policy = {
+  clearance: { "asker-priya": 1, "asker-guest": 0 },
+  defaultClearance: 0, minMatchScore: 2, minConfidence: 0.6, allowAccessRequests: true,
+};
 const HANDLED_CAP = 500;
 
 export interface ExpertState extends Snapshot {
@@ -50,7 +57,7 @@ export function fromSeed(seed: SeedFile): ExpertState {
   return {
     profile: { ...seed.profile },
     knowledge: seed.knowledge.map((e) => ({ ...e, tags: [...e.tags], protectedTokens: [...e.protectedTokens] })),
-    policy: { ...seed.policy, clearance: { ...seed.policy.clearance } },
+    policy: structuredClone(seed.policy ?? DEMO_POLICY),
     pending: [],
     audit: [],
     stats: zeroStats(),

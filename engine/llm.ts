@@ -2,8 +2,12 @@
 // Without OPENAI_API_KEY + OPENAI_MODEL (or with LLM_FAKE=1) it falls back to a deterministic
 // drafter that quotes the visible entries, so the skeleton and tests run offline.
 import { z } from "zod";
-import type { KnowledgeEntry } from "../shared/types";
-import { SYSTEM_PROMPT, userPrompt } from "./prompts";
+import type { KnowledgeEntry } from "../shared/types.js";
+import { SYSTEM_PROMPT, userPrompt } from "./prompts.js";
+
+type Env = Record<string, string | undefined>;
+// Read env without depending on Node typings (the Terse compiler type-checks this file too).
+const processEnv = (): Env => (globalThis as { process?: { env: Env } }).process?.env ?? {};
 
 export const DraftSchema = z.object({
   answer: z.string(),
@@ -23,7 +27,7 @@ export function fakeDraft(visible: KnowledgeEntry[]): Draft {
   };
 }
 
-export function useFake(env: Record<string, string | undefined> = process.env): boolean {
+export function useFake(env: Env = processEnv()): boolean {
   return env.LLM_FAKE === "1" || !env.OPENAI_API_KEY || !env.OPENAI_MODEL;
 }
 
@@ -31,7 +35,7 @@ export async function draft(
   question: string,
   context: string | undefined,
   visible: KnowledgeEntry[],
-  env: Record<string, string | undefined> = process.env,
+  env: Env = processEnv(),
 ): Promise<Draft> {
   if (useFake(env)) return fakeDraft(visible);
   const res = await fetch("https://api.openai.com/v1/chat/completions", {

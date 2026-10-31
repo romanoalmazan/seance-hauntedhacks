@@ -1,11 +1,15 @@
 import { describe, expect, test } from "bun:test";
-import battery from "../seed/battery.json";
-import actuators from "../seed/actuators.json";
-import type { SeedFile } from "../shared/types";
-import { clearanceOf, decide, disclose, fakeDraft, guard, retrieve, userPrompt } from ".";
+import battery from "../seed/battery.json" with { type: "json" };
+import actuators from "../seed/actuators.json" with { type: "json" };
+import type { KnowledgeEntry, Policy } from "../shared/types.js";
+import { clearanceOf, decide, disclose, fakeDraft, guard, retrieve, userPrompt } from "./index.js";
 
-const bat = battery as SeedFile;
-const act = actuators as SeedFile;
+const policy: Policy = {
+  clearance: { "asker-priya": 1, "asker-guest": 0 },
+  defaultClearance: 0, minMatchScore: 2, minConfidence: 0.6, allowAccessRequests: true,
+};
+const bat = { knowledge: battery.knowledge as KnowledgeEntry[], policy };
+const act = { knowledge: actuators.knowledge as KnowledgeEntry[], policy };
 const PRIYA = "asker-priya", GUEST = "asker-guest";
 const ids = (es: { id: string }[]) => es.map((e) => e.id).sort();
 
