@@ -126,11 +126,13 @@
   .withheld ul { margin: 2px 0 0; padding-left: 20px; }
   .withheld p { margin: 4px 0 0; font-weight: 600; }
 
-  form { display: flex; gap: 10px; padding: 12px 24px 16px; border-top: 1px solid var(--line); }
+  form { display: flex; align-items: flex-end; gap: 10px; padding: 12px 24px 16px; border-top: 1px solid var(--line); }
   #input {
     flex: 1; min-width: 0; padding: 10px 14px; font: inherit; color: inherit; caret-color: var(--accent);
     background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
+    resize: none; overflow-y: auto; max-height: 40vh; line-height: 1.45;
   }
+  form button { align-self: stretch; max-height: 3.2em; }
   #input::placeholder { color: var(--muted); opacity: 1; }
   #input:focus-visible, .team:focus-visible, form button:focus-visible {
     outline: 2px solid var(--accent); outline-offset: 1px;
@@ -195,14 +197,28 @@
     <p>Type @ and the team's name, then your question. Answers come from that team's expert, at your access level.</p>
   </div>
   <form id="form">
-    <input id="input" aria-label="Your question" autocomplete="off" autofocus
-           placeholder="@software What format should data be in to send it to the X database?">
+    <textarea id="input" rows="1" aria-label="Your question" autocomplete="off" autofocus
+           placeholder="@software What format should data be in to send it to the X database?"></textarea>
     <button type="submit">Ask</button>
   </form>
 </main>
 <script>
   const log = document.getElementById("log");
   const input = document.getElementById("input");
+  // The box grows to show everything typed (up to 40% of the screen, then it scrolls).
+  function fit() {
+    input.style.height = "auto";
+    input.style.height = `${input.scrollHeight + 2}px`;
+  }
+  input.addEventListener("input", fit);
+  window.addEventListener("resize", fit);
+  // Enter sends, Shift+Enter is a new line (it is a textarea now).
+  input.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" && !event.shiftKey && !event.isComposing) {
+      event.preventDefault();
+      document.getElementById("form").requestSubmit();
+    }
+  });
   const teamNames = {};
   const teamOwners = {};
   const parts = new Map();  // requestId -> the element on screen
@@ -316,12 +332,14 @@
     const text = input.value; // untrimmed: /raw sends exactly what was typed
     if (!text.trim()) return;
     input.value = "";
+    fit();
     send(text);
   });
 
   function addressTeam(teamId) {
     const mention = `@${teamId}`;
     if (!input.value.includes(mention)) input.value = `${mention} ${input.value}`;
+    fit();
     input.focus();
   }
 
@@ -363,6 +381,7 @@
       isOwner = true;
       document.getElementById("share").hidden = false;
       input.value = OWNER_PREFILL;
+      fit();
       input.placeholder = "Tell your agent something, or ask a team with @";
       const empty = document.getElementById("empty");
       empty.querySelector("h2").textContent = "Tell your agent, or ask a team";
@@ -404,6 +423,7 @@
     parts.clear();
     latest.clear();
     input.value = isOwner ? OWNER_PREFILL : "";
+    fit();
     pop.hidden = true;
   });
 
