@@ -4,7 +4,7 @@ import { z } from "zod";
 
 export const PROTOCOL_VERSION = 1 as const;
 
-const teamId = z.enum(["battery", "actuators"]);
+const teamId = z.enum(["battery", "actuators", "software"]);
 const tier = z.enum(["public", "internal", "restricted"]);
 const status = z.enum(["answered", "partial", "refused", "escalated"]);
 

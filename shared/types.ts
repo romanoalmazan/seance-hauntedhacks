@@ -1,5 +1,5 @@
 // Contract types shared by both lanes. Owned by surfaces; see SPEC §6, §9, §10.
-export type TeamId = "battery" | "actuators";
+export type TeamId = "battery" | "actuators" | "software";
 export type Tier = "public" | "internal" | "restricted"; // ranks 0, 1, 2
 export type Clearance = 0 | 1 | 2;
 export type Status = "answered" | "partial" | "refused" | "escalated";
