@@ -13,7 +13,7 @@ const sh = (cmd: string) => Bun.spawnSync(["sh", "-c", cmd]).stdout.toString().t
 const env = process.env; // Bun loads .env
 
 // 1. Ports up and bound to localhost only
-const PORTS: [number, string][] = [[8787, "Relay engine"], [7100, "Terse dev server"], [3000, "console"], [3001, "Priya asker"], [3002, "Robotics asker"], [3003, "Sam asker"]];
+const PORTS: [number, string][] = [[8787, "Relay engine"], [7100, "Terse dev server"], [3000, "console"], [3001, "Romano asker"], [3002, "Justin asker"], [3003, "Sam asker"]];
 for (const [port, name] of PORTS) {
   const addrs = sh(`lsof -nP -iTCP:${port} -sTCP:LISTEN | awk 'NR>1 {print $9}' | sort -u`).split("\n").filter(Boolean);
   if (!addrs.length) bad(`${name} :${port} is not listening`);

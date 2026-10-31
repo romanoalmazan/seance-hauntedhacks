@@ -75,7 +75,7 @@ function firstAnswer(ask: Ask, sender: string): Answer {
       escalationId: `esc-${ask.requestId}`,
     });
   }
-  if (ask.to === "battery" && sender === "asker-robotics" && /current/i.test(ask.question)) {
+  if (ask.to === "battery" && sender === "asker-justin" && /current/i.test(ask.question)) {
     return answerTo(ask, {
       status: "partial",
       ...publicFields("battery"),

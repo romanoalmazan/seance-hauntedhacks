@@ -1,98 +1,30 @@
-SÉANCE DEMO SCRIPT  (Software story)
-About three minutes. Four screens: Sam's chat (Software), Priya's chat (Controls),
-Alex's chat (Robotics) and the owner console. Every person has the same kind of chat
-and their own agent; there is no hierarchy. Sam's agent also holds what he teaches it. Everyone is inside XYZ Company. Type exactly
-what is written here. Don't improvise.
+SÉANCE DEMO SCRIPT · XYZ Company
 
-Screens
-  Sam, Software      http://127.0.0.1:3003       (Sam's agent; "Share agent context" button)
-  Owner console      http://127.0.0.1:3000       (counters, timeline, audit log)
-  Priya, Controls    http://127.0.0.1:3001
-  Alex, Robotics     http://127.0.0.1:3002
+Pages
+  Sam, Software        http://127.0.0.1:3003
+  Romano, Controls     http://127.0.0.1:3001
+  Justin, Robotics     http://127.0.0.1:3002
+  Console              http://127.0.0.1:3000
 
-Before every run
-  1. scripts/demo.sh stop && scripts/demo.sh        (from the repo root)
-  2. bun scripts/warmup.ts
-  3. Press Reset on the console. All three chats empty (Sam's box pre-filled with the
-     format again), counters 0, both teams unshared.
-  4. bun scripts/preflight.ts                        every line must say ok
-
-DON'T
-  - Don't refresh a chat page. Its answers are only on the page.
-  - Don't ask @software anything before Sam sends the format (it would page Sam).
-  - Don't restart anything during the demo.
+Before: scripts/demo.sh · bun scripts/warmup.ts · Reset (console) · bun scripts/preflight.ts (all ok)
+Don't refresh a chat page. Don't ask @software before Sam sends the format.
 
 
-BEAT 1 · Sam tells his agent the format once      ("Ask the agent, not the engineer.")
-Page: Sam (http://127.0.0.1:3003). The message box is pre-filled:
+1 · Sam teaches his agent
+Sam's page: press Enter on the pre-filled format.
+  -> "Got it. I saved "X database ingest format" as sof-T1."
+Click Share agent context, tick Controls team, Done.
 
-  X database ingest format: Send JSON to the X database /ingest endpoint. Each record:
-  device_id (string), ts (ISO-8601, UTC), metric (string), value (number), unit
-  (SI unit string). Batch up to 500 records per POST; gzip bodies over 1 MB.
+2 · Romano asks
+Romano's page:  @software What format should data be in to send it to the X database?
+  -> green "answered", the format, Sources: sof-T1. Sam wasn't interrupted.
 
-Press Enter (no @team: Sam is telling his own agent).
-Should appear on Sam's page: his message, then "Got it. I saved "X database ingest
-format" as sof-T1. Use Share agent context to choose which teams can ask me about it."
-Click "Share agent context" (top right, beside "Sam's agent"). In the pop-up tick
-Controls team only ("Controls team can now ask your agent."), then click Done.
-Should appear on the console: Learned 1.
-Say: Sam tells his agent once and shares it with the teams he chooses. It lives in
-the Software team's Durable Actor, not in a shared bot.
+3 · Justin asks
+Justin's page: the same question.
+  -> red "refused", "You can ask Sam for access."
 
+4 · Sam shares with Robotics
+Sam's page: Share agent context, tick Robotics company, Done.
+Justin asks again -> green "answered", sof-T1.
 
-BEAT 2 · Controls gets the answer without bothering Sam
-Page: Priya. Type, then press Enter:
-
-  @software What format should data be in to send it to the X database?
-
-Should appear on Priya's page (about 1-2 s):
-  Software with a green "answered" pill: JSON, the five fields (device_id, ts,
-  metric, value, unit), 500 records per POST, gzip over 1 MB, and
-  Sources: sof-T1 X database ingest format. (Wording varies a little per run.)
-Should appear on the console:
-  Interruptions avoided 1. Repeats served 1. A row in the timeline and audit log
-  (asker-priya, Answered, used sof-T1). The flow strip lights asker-priya ->
-  Agent Relay -> expert-software and back.
-Say: Priya's agent asked Sam's agent over Agent Relay. Sam wasn't interrupted.
-
-
-BEAT 3 · Robotics isn't allowed yet
-Page: Alex. Type, then press Enter:
-
-  @software What format should data be in to send it to the X database?
-
-Should appear on Alex's page:
-  Software with a red "refused" pill: "I can't share that at your access level."
-  1 withheld: "Sam documented this for approved teams only." and
-  "You can ask Sam for access."
-Should appear on the console:
-  Requests refused 1. Audit log: asker-robotics, Refused, withheld sof-T1.
-Say: Relay proves who is asking; the actor checks the team before the model sees
-anything. Robotics never got the text, not even into the prompt.
-
-
-BEAT 4 · Sam opens it to Robotics, live
-Page: Sam. Click "Share agent context", tick Robotics company, click Done.
-Page: Alex. Type the same question again, then press Enter:
-
-  @software What format should data be in to send it to the X database?
-
-Should appear on Alex's page:
-  Software with a green "answered" pill, the same format, Sources: sof-T1.
-Should appear on the console:
-  Interruptions avoided 2. Repeats served 2.
-Proves: the owner controls who can ask, per team, and it takes effect instantly.
-Optional, it works both ways (no hierarchy): on Priya's page type, without an @team,
-  Controller current limit: Set the ACT-7 controller peak current limit to 38 A and allow at most 3 peak events per minute.
-Her agent saves it (con-T1). Share agent context -> tick Software team. On Sam's page:
-  @controls What controller current limit should I use?
-Sam gets it from Priya's agent; Alex asking @controls is refused until Priya shares with Robotics.
-
-
-CLOSE · the audit log
-Page: console, scroll to the Audit log. Four rows: Sam learned sof-T1,
-asker-priya answered, asker-robotics refused (withheld sof-T1), asker-robotics
-answered. Guard catches 0.
-Say: data stays home, answers travel. Every answer and refusal is on record.
-
-After the run: press Reset on the console (removes sof-T1, unticks both teams, clears all chats).
+After: Reset on the console.

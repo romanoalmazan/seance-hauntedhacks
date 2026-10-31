@@ -21,14 +21,14 @@ export const DIRECTORY: TeamInfo[] = [
   {
     teamId: "controls",
     displayName: "Controls",
-    ownerName: "Priya",
+    ownerName: "Romano",
     owns: "controller tuning, current limits, safety interlocks",
     address: "expert-controls",
   },
   {
     teamId: "robotics",
     displayName: "Robotics",
-    ownerName: "Alex",
+    ownerName: "Justin",
     owns: "robot cells, motion planning, test rigs",
     address: "expert-robotics",
   },

@@ -124,8 +124,8 @@ describe("createAsker", () => {
     expect(relay.sent).toHaveLength(0);
     expect(reply.asks).toEqual([]);
     expect(reply.notice).toContain("Which team");
-    expect(reply.text).toContain("@controls (Priya:");
-    expect(reply.text).toContain("@robotics (Alex:");
+    expect(reply.text).toContain("@controls (Romano:");
+    expect(reply.text).toContain("@robotics (Justin:");
   });
 
   test("only unknown teams: says so and sends nothing", async () => {
@@ -135,7 +135,7 @@ describe("createAsker", () => {
 
     expect(relay.sent).toHaveLength(0);
     expect(reply.notice).toContain("@netops");
-    expect(reply.text).toContain("@controls (Priya:");
+    expect(reply.text).toContain("@controls (Romano:");
   });
 
   test("a known and an unknown team: sends to the known one and reports the other", async () => {

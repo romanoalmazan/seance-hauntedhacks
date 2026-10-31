@@ -2,12 +2,12 @@
   "profile": {
     "teamId": "controls",
     "displayName": "Controls",
-    "ownerName": "Priya"
+    "ownerName": "Romano"
   },
   "policy": {
     "clearance": {
       "asker-sam": 0,
-      "asker-robotics": 0
+      "asker-justin": 0
     },
     "defaultClearance": 0,
     "minMatchScore": 2,

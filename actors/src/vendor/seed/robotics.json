@@ -2,12 +2,12 @@
   "profile": {
     "teamId": "robotics",
     "displayName": "Robotics",
-    "ownerName": "Alex"
+    "ownerName": "Justin"
   },
   "policy": {
     "clearance": {
       "asker-sam": 0,
-      "asker-priya": 0
+      "asker-romano": 0
     },
     "defaultClearance": 0,
     "minMatchScore": 2,

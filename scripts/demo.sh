@@ -111,12 +111,12 @@ wait_for "robotics bridge" bridge-robotics.log grep -q listening bridge-robotics
 
 echo "Starting the surfaces..."
 export REAL=1
-start asker-priya.log bun asker/server.ts asker-priya
-start asker-robotics.log bun asker/server.ts asker-robotics
+start asker-romano.log bun asker/server.ts asker-romano
+start asker-justin.log bun asker/server.ts asker-justin
 start asker-sam.log bun asker/server.ts asker-sam
 start console.log bun console/server.ts
-wait_for "Priya asker" asker-priya.log curl -s -o /dev/null 127.0.0.1:3001
-wait_for "Robotics asker" asker-robotics.log curl -s -o /dev/null 127.0.0.1:3002
+wait_for "Romano asker" asker-romano.log curl -s -o /dev/null 127.0.0.1:3001
+wait_for "Justin asker" asker-justin.log curl -s -o /dev/null 127.0.0.1:3002
 wait_for "Sam asker" asker-sam.log curl -s -o /dev/null 127.0.0.1:3003
 wait_for "console" console.log curl -s -o /dev/null 127.0.0.1:3000
 
@@ -125,8 +125,8 @@ cat <<URLS
 Up, on the real stack:
   Sam, Software  http://127.0.0.1:3003
   Owner console  http://127.0.0.1:3000
-  Priya          http://127.0.0.1:3001
-  Alex, Robotics http://127.0.0.1:3002
+  Romano, Controls http://127.0.0.1:3001
+  Justin, Robotics http://127.0.0.1:3002
 
 Press Reset on the console before every run. Stop with: scripts/demo.sh stop
 URLS

@@ -28,7 +28,7 @@ const notice = (id = "esc-9"): EscalationNotice => ({
   escalation: {
     id,
     requestId: "req-9",
-    asker: "asker-priya",
+    asker: "asker-romano",
     question: "Which way is up?",
     reason: "low_confidence",
     status: "pending",
@@ -76,7 +76,7 @@ describe("reads", () => {
     expect(view.profile.ownerName).toBe("Dana");
     expect(view.knowledge.find((entry) => entry.id === "bat-04")?.full).toContain("PELICAN");
     expect(view.policy).toEqual({
-      clearance: { "asker-priya": 1, "asker-robotics": 0 },
+      clearance: { "asker-romano": 1, "asker-justin": 0 },
       defaultClearance: 0,
       minMatchScore: 2,
       minConfidence: 0.6,
@@ -185,7 +185,7 @@ describe("escalation cards", () => {
         escalationId: "esc-1",
         requestId: "req-1",
         team: "actuators",
-        asker: "asker-priya",
+        asker: "asker-romano",
         question: "Does ACT-7 support regenerative braking into the pack?",
         reason: "no_knowledge",
       },
@@ -257,7 +257,7 @@ describe("POST /owner-reply", () => {
     expect(view.pending.map((escalation) => escalation.status)).toEqual(["answered"]);
     expect(view.stats).toMatchObject({ escalated: 1, learned: 1 });
     expect(view.audit.at(-1)).toMatchObject({
-      asker: "asker-priya",
+      asker: "asker-romano",
       question: "Does ACT-7 support regenerative braking into the pack?",
       decision: "learned",
     });
@@ -325,7 +325,7 @@ describe("reconciling cards with the actors", () => {
         escalationId: id,
         requestId: "req-1",
         team: "actuators",
-        asker: "asker-priya",
+        asker: "asker-romano",
         question: "Does ACT-7 support regenerative braking into the pack?",
         reason: "no_knowledge",
       },
@@ -515,10 +515,10 @@ describe("POST /clearance", () => {
   ];
 
   test.each([
-    ["asker-robotics", 1],
-    ["asker-priya", 0], // 0 is falsy, so it's the level a careless check would drop
+    ["asker-justin", 1],
+    ["asker-romano", 0], // 0 is falsy, so it's the level a careless check would drop
   ])("sets %s to %d on both teams and leaves the other asker alone", async (agent, level) => {
-    const other = agent === "asker-robotics" ? "asker-priya" : "asker-robotics";
+    const other = agent === "asker-justin" ? "asker-romano" : "asker-justin";
     const before = await levels(other);
 
     expect((await change({ agent, level })).status).toBe(200);
@@ -528,14 +528,14 @@ describe("POST /clearance", () => {
   });
 
   test.each([
-    ["clearance 2, which no asker may have (SPEC §6)", { agent: "asker-robotics", level: 2 }],
-    ["clearance 2 for Priya", { agent: "asker-priya", level: 2 }],
-    ["a level above 2", { agent: "asker-robotics", level: 3 }],
-    ["a negative level", { agent: "asker-robotics", level: -1 }],
-    ["a fractional level", { agent: "asker-robotics", level: 1.5 }],
-    ["a level sent as a string", { agent: "asker-robotics", level: "1" }],
-    ["a null level", { agent: "asker-robotics", level: null }],
-    ["a missing level", { agent: "asker-robotics" }],
+    ["clearance 2, which no asker may have (SPEC §6)", { agent: "asker-justin", level: 2 }],
+    ["clearance 2 for Priya", { agent: "asker-romano", level: 2 }],
+    ["a level above 2", { agent: "asker-justin", level: 3 }],
+    ["a negative level", { agent: "asker-justin", level: -1 }],
+    ["a fractional level", { agent: "asker-justin", level: 1.5 }],
+    ["a level sent as a string", { agent: "asker-justin", level: "1" }],
+    ["a null level", { agent: "asker-justin", level: null }],
+    ["a missing level", { agent: "asker-justin" }],
     // A valid level on purpose, so only the agent check can reject these.
     ["an unknown asker", { agent: "asker-mallory", level: 1 }],
     ["an expert's agent", { agent: "expert-battery", level: 1 }],
@@ -553,10 +553,10 @@ describe("POST /clearance", () => {
   });
 
   test("Reset puts the clearance back", async () => {
-    const before = await levels("asker-robotics");
-    await change({ agent: "asker-robotics", level: 1 });
+    const before = await levels("asker-justin");
+    await change({ agent: "asker-justin", level: 1 });
     await post("/reset");
-    expect(await levels("asker-robotics")).toEqual(before);
+    expect(await levels("asker-justin")).toEqual(before);
   });
 
   test("only POST changes a clearance", async () => {
@@ -576,7 +576,7 @@ describe("POST /clearance", () => {
         reset: () => fakes.expert(team).reset(),
       }),
     });
-    expect((await change({ agent: "asker-robotics", level: 1 })).status).toBe(500);
+    expect((await change({ agent: "asker-justin", level: 1 })).status).toBe(500);
   });
 });
 
@@ -719,7 +719,7 @@ describe("POST /reset", () => {
   test("restores the seed on both teams and clears the timeline", async () => {
     await post("/dev/event", event);
     await fakes.expert("battery").setSensitivity("bat-02", "public");
-    await fakes.expert("actuators").setClearance("asker-robotics", 1);
+    await fakes.expert("actuators").setClearance("asker-justin", 1);
 
     expect((await post("/reset")).status).toBe(200);
 
@@ -727,7 +727,7 @@ describe("POST /reset", () => {
     expect(await feed()).toEqual([]);
     expect(battery.stats.asked).toBe(0);
     expect(battery.knowledge.find((entry) => entry.id === "bat-02")?.sensitivity).toBe("internal");
-    expect((await snapshot("actuators")).policy.clearance["asker-robotics"]).toBe(0);
+    expect((await snapshot("actuators")).policy.clearance["asker-justin"]).toBe(0);
   });
 
   test("an actor failure is a 500, not a hang or a false ok", async () => {

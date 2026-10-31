@@ -6,8 +6,8 @@
   },
   "policy": {
     "clearance": {
-      "asker-priya": 0,
-      "asker-robotics": 0
+      "asker-romano": 0,
+      "asker-justin": 0
     },
     "defaultClearance": 0,
     "minMatchScore": 2,

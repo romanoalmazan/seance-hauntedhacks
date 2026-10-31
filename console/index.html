@@ -353,13 +353,13 @@
     </div>
     <div class="flow-map">
       <svg viewBox="0 0 1200 116" role="img" aria-label="Askers on the left and experts on the right, connected through Agent Relay in the center, with the owner console below Relay.">
-        <path class="flow-spoke" data-spoke="asker-priya" d="M190 18C340 18 360 40 505 40"/>
-        <path class="flow-spoke" data-spoke="asker-robotics" d="M190 62C340 62 360 40 505 40"/>
+        <path class="flow-spoke" data-spoke="asker-romano" d="M190 18C340 18 360 40 505 40"/>
+        <path class="flow-spoke" data-spoke="asker-justin" d="M190 62C340 62 360 40 505 40"/>
         <path class="flow-spoke" data-spoke="expert-software" d="M1010 18C860 18 840 40 695 40"/>
         <path class="flow-spoke" data-spoke="expert-battery" d="M1010 62C860 62 840 40 695 40"/>
         <path class="flow-spoke" data-spoke="console" d="M600 80V58"/>
-        <g class="flow-node" data-node="asker-priya"><rect x="1" y="1" width="189" height="34" rx="8"/><text x="95" y="18">asker-priya</text></g>
-        <g class="flow-node" data-node="asker-robotics"><rect x="1" y="45" width="189" height="34" rx="8"/><text x="95" y="62">asker-robotics</text></g>
+        <g class="flow-node" data-node="asker-romano"><rect x="1" y="1" width="189" height="34" rx="8"/><text x="95" y="18">asker-romano</text></g>
+        <g class="flow-node" data-node="asker-justin"><rect x="1" y="45" width="189" height="34" rx="8"/><text x="95" y="62">asker-justin</text></g>
         <g class="flow-node" data-node="relay"><rect x="505" y="22" width="190" height="36" rx="8"/><text x="600" y="40">Agent Relay</text></g>
         <g class="flow-node" data-node="expert-software"><rect x="1010" y="1" width="189" height="34" rx="8"/><text x="1105" y="18">expert-software</text></g>
         <g class="flow-node" data-node="expert-battery"><rect x="1010" y="45" width="189" height="34" rx="8"/><text x="1105" y="62">expert-battery</text></g>
@@ -424,12 +424,12 @@
 
 <script>
   const TEAMS = ["software", "controls", "robotics"];
-  const ACCESS_GROUPS = { controls: "asker-priya", robotics: "asker-robotics" };
+  const ACCESS_GROUPS = { controls: "asker-romano", robotics: "asker-justin" };
   let accessWrites = 0;
   const POLL_MS = 1000;
   const AUDIT_ROWS = 20;
   const TIERS = ["public", "internal", "restricted"];
-  const ASKERS = { "asker-priya": "Priya Raman, Controls", "asker-robotics": "Alex Chen, Robotics", "asker-sam": "Sam Patel, Software" };
+  const ASKERS = { "asker-romano": "Romano, Controls", "asker-justin": "Justin, Robotics", "asker-sam": "Sam, Software" };
   const DECISION_LABELS = {
     answered: "Answered",
     partial: "Partial",

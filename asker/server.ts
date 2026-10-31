@@ -1,4 +1,4 @@
-// One process per asker: `bun asker/server.ts asker-robotics`, or set ASKER_AGENT. Default asker-priya.
+// One process per asker: `bun asker/server.ts asker-justin`, or set ASKER_AGENT. Default asker-romano.
 // REAL=1 uses the real Relay (see docs/RUNBOOK.md); otherwise the in-memory fake.
 import { z } from "zod";
 import { fakeConnect } from "../shared/fakes";
@@ -11,12 +11,12 @@ import { eventStream } from "./events";
 // `owns`: this person also runs a team's expert. A message to their own agent with no @team is
 // them telling it something (saved via the console's /teach), and they choose who may ask.
 const ASKERS: Record<string, { port: number; owns?: TeamId } & AskerIdentity> = {
-  "asker-priya": { agent: "asker-priya", human: "Priya Raman", team: "Controls", port: 3001, owns: "controls" },
-  "asker-robotics": { agent: "asker-robotics", human: "Alex Chen", team: "Robotics", port: 3002, owns: "robotics" },
-  "asker-sam": { agent: "asker-sam", human: "Sam Patel", team: "Software", port: 3003, owns: "software" },
+  "asker-romano": { agent: "asker-romano", human: "Romano", team: "Controls", port: 3001, owns: "controls" },
+  "asker-justin": { agent: "asker-justin", human: "Justin", team: "Robotics", port: 3002, owns: "robotics" },
+  "asker-sam": { agent: "asker-sam", human: "Sam", team: "Software", port: 3003, owns: "software" },
 };
 
-const agent = process.argv[2] ?? process.env.ASKER_AGENT ?? "asker-priya";
+const agent = process.argv[2] ?? process.env.ASKER_AGENT ?? "asker-romano";
 const config = ASKERS[agent];
 if (!config) {
   console.error(`Unknown asker ${agent}. Use one of: ${Object.keys(ASKERS).join(", ")}`);
@@ -25,7 +25,7 @@ if (!config) {
 const { port, owns, ...identity } = config;
 const CONSOLE = "http://127.0.0.1:3000";
 // Who belongs to which team, for "Share agent context": each owner shares with the other teams.
-const GROUPS = { software: "asker-sam", controls: "asker-priya", robotics: "asker-robotics" } as const;
+const GROUPS = { software: "asker-sam", controls: "asker-romano", robotics: "asker-justin" } as const;
 type Group = keyof typeof GROUPS;
 const GROUP_LABELS: Record<Group, string> = { software: "Software team", controls: "Controls team", robotics: "Robotics company" };
 const shareBody = z.object({ group: z.enum(["software", "controls", "robotics"]), allowed: z.boolean() });

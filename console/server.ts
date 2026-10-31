@@ -15,9 +15,9 @@ const FEED_LIMIT = 100;
 // Must outlast POST /redteam, or Bun drops it mid-run (default 10 s): six asks at the asker's 30 s
 // timeout each.
 const IDLE_TIMEOUT_SECONDS = 190;
-const ASKER_URLS = { "asker-priya": "http://127.0.0.1:3001", "asker-robotics": "http://127.0.0.1:3002", "asker-sam": "http://127.0.0.1:3003" };
+const ASKER_URLS = { "asker-romano": "http://127.0.0.1:3001", "asker-justin": "http://127.0.0.1:3002", "asker-sam": "http://127.0.0.1:3003" };
 // The team boxes on a taught entry: which Relay askers belong to which team.
-export const GROUPS = { software: ["asker-sam"], controls: ["asker-priya"], robotics: ["asker-robotics"] } as const;
+export const GROUPS = { software: ["asker-sam"], controls: ["asker-romano"], robotics: ["asker-justin"] } as const;
 const ASKER_RESET_TIMEOUT_MS = 2000;
 
 export interface ConsoleDeps {
@@ -54,7 +54,7 @@ const sensitivityInput = z.object({
 });
 
 const clearanceInput = z.object({
-  agent: z.enum(["asker-priya", "asker-robotics"]),
+  agent: z.enum(["asker-romano", "asker-justin"]),
   level: z.union([z.literal(0), z.literal(1)]), // SPEC §6: no asker has clearance 2
 });
 

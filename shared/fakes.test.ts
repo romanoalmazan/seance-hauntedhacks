@@ -6,8 +6,8 @@ import type { AskRecord } from "../asker/asker-agent";
 import { fakeConnect } from "./fakes";
 import { encode, parseMessage } from "./protocol";
 
-const PRIYA = { agent: "asker-priya", human: "Priya Raman", team: "Controls" };
-const GUEST = { agent: "asker-robotics", human: "Alex Chen", team: "Robotics" };
+const PRIYA = { agent: "asker-romano", human: "Romano", team: "Controls" };
+const GUEST = { agent: "asker-justin", human: "Justin", team: "Robotics" };
 const REGEN = "@actuators Does ACT-7 support regenerative braking into the pack?";
 const PACK = "@battery What current can the pack deliver?";
 
