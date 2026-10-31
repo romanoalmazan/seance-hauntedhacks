@@ -52,7 +52,7 @@ export async function connect(agent: string, opts: ConnectOptions = {}): Promise
 
   // relay.as(token) only needs a client; workspace key is not required for agent operations.
   const relay = new RelayCast({ apiKey: tokens?.workspaceKey ?? "unused", baseUrl });
-  const me = relay.as(token);
+  let me = relay.as(token);
 
   const handlers: Handler[] = [];
   const seenIds = new Set<string>();
@@ -97,15 +97,41 @@ export async function connect(agent: string, opts: ConnectOptions = {}): Promise
     return draining;
   }
 
-  me.subscribe(["@self"], (ev: any) => {
-    if (ev?.type !== "dm.received") return;
-    void ingest(ev.message?.id, ev.message?.agentName, ev.message?.text);
-  });
-  me.on.connected(() => { log("connected"); void drain(); });
-  me.on.resynced(() => { void drain(); });
-  me.on.reconnecting((n) => log(`reconnecting (${n})`));
-  me.connect();
+  function attach() {
+    me.subscribe(["@self"], (ev: any) => {
+      if (ev?.type !== "dm.received") return;
+      void ingest(ev.message?.id, ev.message?.agentName, ev.message?.text);
+    });
+    me.on.connected(() => { log("connected"); void drain(); });
+    me.on.resynced(() => { void drain(); });
+    me.on.reconnecting((n) => log(`reconnecting (${n})`));
+    me.connect();
+  }
+  attach();
   await drain(); // drain on start, even before the socket is up
+
+  // Watchdog. When the engine process restarts, the SDK's socket goes half-open and never fires close,
+  // so its own reconnect never starts. Check /health (liveness, not message polling); when the engine
+  // comes back after being down, rebuild the agent client, re-subscribe and drain what queued meanwhile.
+  let engineDown = false;
+  const watchdog = setInterval(async () => {
+    if (closed) return;
+    const ok = await fetch(`${baseUrl}/health`, { signal: AbortSignal.timeout(1500) }).then((r) => r.ok, () => false);
+    if (!ok) {
+      if (!engineDown) log("engine unreachable");
+      engineDown = true;
+      return;
+    }
+    if (!engineDown) return;
+    engineDown = false;
+    log("engine back: reconnecting");
+    const old = me;
+    me = relay.as(token);
+    old.disconnect().catch(() => {});
+    attach();
+    await drain();
+  }, 2000);
+  watchdog.unref?.();
 
   return {
     agent,
@@ -122,6 +148,7 @@ export async function connect(agent: string, opts: ConnectOptions = {}): Promise
     async close() {
       if (closed) return;
       closed = true;
+      clearInterval(watchdog);
       try { await me.disconnect(); } catch {}
     },
   };
