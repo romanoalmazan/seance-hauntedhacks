@@ -238,6 +238,12 @@ describe("POST /owner-reply", () => {
     await post("/owner-reply", reply("esc-1"));
 
     const view = await snapshot("actuators");
+    expect(view.knowledge.at(-1)).toMatchObject({
+      id: "act-L1",
+      title: "Does ACT-7 support regenerative braking into the pack?",
+      sensitivity: "public",
+      source: "owner_answer",
+    });
     expect(view.pending.map((escalation) => escalation.status)).toEqual(["answered"]);
     expect(view.stats).toMatchObject({ escalated: 1, learned: 1 });
     expect(view.audit.at(-1)).toMatchObject({
@@ -251,6 +257,7 @@ describe("POST /owner-reply", () => {
     await post("/dev/escalate");
     await post("/owner-reply", reply("esc-1", { save: false }));
     const view = await snapshot("actuators");
+    expect(view.knowledge).toHaveLength(5);
     expect(view.stats).toMatchObject({ escalated: 1, learned: 0 });
     expect(view.audit.at(-1)?.decision).toBe("answered");
   });
@@ -402,6 +409,168 @@ describe("reconciling cards with the actors", () => {
     });
     expect((await down(new Request("http://console/cards"))).status).toBe(500);
   });
+});
+
+describe("POST /sensitivity", () => {
+  const change = (overrides: object = {}) =>
+    post("/sensitivity", { team: "battery", entryId: "bat-02", tier: "public", ...overrides });
+  const tierOf = async (team: string, id: string) =>
+    (await snapshot(team)).knowledge.find((entry) => entry.id === id)?.sensitivity;
+
+  test("flips one entry on one team, and the next snapshot shows it", async () => {
+    const before = await snapshot("actuators");
+    expect(await tierOf("battery", "bat-02")).toBe("internal");
+
+    const response = await change();
+
+    expect(response.status).toBe(200);
+    expect(await tierOf("battery", "bat-02")).toBe("public");
+    expect(await tierOf("battery", "bat-03")).toBe("internal");
+    expect((await snapshot("actuators")).knowledge).toEqual(before.knowledge);
+  });
+
+  test.each([
+    ["an unknown tier", { tier: "secret" }],
+    ["a tier in the wrong case", { tier: "Public" }],
+    ["a missing tier", { tier: undefined }],
+    ["an unknown team", { team: "legal" }],
+    ["a missing entry id", { entryId: undefined }],
+    ["an empty entry id", { entryId: "" }],
+  ])("%s is a 400 and changes nothing", async (_name, overrides) => {
+    expect((await change(overrides)).status).toBe(400);
+    expect(await tierOf("battery", "bat-02")).toBe("internal");
+  });
+
+  test("a body that isn't JSON is a 400", async () => {
+    expect((await post("/sensitivity")).status).toBe(400);
+  });
+
+  test.each([
+    ["an entry that doesn't exist", { entryId: "bat-99" }],
+    ["another team's entry", { team: "actuators" }],
+  ])("%s is a 404, even though the real actor would ignore it quietly", async (_name, overrides) => {
+    let calls = 0;
+    app = handler({
+      ...fakes,
+      expert: (team) => ({
+        snapshot: () => fakes.expert(team).snapshot(),
+        setSensitivity: async () => void (calls += 1), // the real actor's behaviour on an unknown id
+        setClearance: (agent, level) => fakes.expert(team).setClearance(agent, level),
+        reset: () => fakes.expert(team).reset(),
+      }),
+    });
+    expect((await change(overrides)).status).toBe(404);
+    expect(calls).toBe(0);
+  });
+
+  test("a learned entry can move too", async () => {
+    await post("/dev/escalate");
+    await post("/owner-reply", reply("esc-1"));
+    expect(await tierOf("actuators", "act-L1")).toBe("public");
+
+    expect((await change({ team: "actuators", entryId: "act-L1", tier: "internal" })).status).toBe(200);
+
+    expect(await tierOf("actuators", "act-L1")).toBe("internal");
+  });
+
+  test("Reset puts the tier back", async () => {
+    await change();
+    await post("/reset");
+    expect(await tierOf("battery", "bat-02")).toBe("internal");
+  });
+
+  test("only POST changes a tier", async () => {
+    expect((await get("/sensitivity")).status).toBe(404);
+  });
+
+  test("an actor failure is a 500, not a false ok", async () => {
+    app = handler({
+      ...fakes,
+      expert: (team) => ({
+        snapshot: () => fakes.expert(team).snapshot(),
+        setSensitivity: () => Promise.reject(new Error("actor down")),
+        setClearance: (agent, level) => fakes.expert(team).setClearance(agent, level),
+        reset: () => fakes.expert(team).reset(),
+      }),
+    });
+    expect((await change()).status).toBe(500);
+  });
+});
+
+describe("POST /clearance", () => {
+  const change = (body: object) => post("/clearance", body);
+  const levels = async (agent: string): Promise<(number | undefined)[]> => [
+    (await snapshot("battery")).policy.clearance[agent],
+    (await snapshot("actuators")).policy.clearance[agent],
+  ];
+
+  test.each([
+    ["asker-guest", 1],
+    ["asker-guest", 2],
+    ["asker-priya", 0], // 0 is falsy, so it's the level a careless check would drop
+  ])("sets %s to %d on both teams and leaves the other asker alone", async (agent, level) => {
+    const other = agent === "asker-guest" ? "asker-priya" : "asker-guest";
+    const before = await levels(other);
+
+    expect((await change({ agent, level })).status).toBe(200);
+
+    expect(await levels(agent)).toEqual([level, level]);
+    expect(await levels(other)).toEqual(before);
+  });
+
+  test.each([
+    ["a level above 2", { agent: "asker-guest", level: 3 }],
+    ["a negative level", { agent: "asker-guest", level: -1 }],
+    ["a fractional level", { agent: "asker-guest", level: 1.5 }],
+    ["a level sent as a string", { agent: "asker-guest", level: "1" }],
+    ["a null level", { agent: "asker-guest", level: null }],
+    ["a missing level", { agent: "asker-guest" }],
+    ["an unknown asker", { agent: "asker-mallory", level: 2 }],
+    ["an expert's agent", { agent: "expert-battery", level: 2 }],
+    ["a prototype key as the agent", { agent: "constructor", level: 2 }],
+    ["a missing agent", { level: 2 }],
+  ])("%s is a 400 and changes nothing", async (_name, body) => {
+    const before = (await snapshot("battery")).policy;
+    expect((await change(body)).status).toBe(400);
+    expect((await snapshot("battery")).policy).toEqual(before);
+    expect((await snapshot("actuators")).policy).toEqual(before);
+  });
+
+  test("a body that isn't JSON is a 400", async () => {
+    expect((await post("/clearance")).status).toBe(400);
+  });
+
+  test("Reset puts the clearance back", async () => {
+    await change({ agent: "asker-guest", level: 2 });
+    await post("/reset");
+    expect(await levels("asker-guest")).toEqual([0, 0]);
+  });
+
+  test("only POST changes a clearance", async () => {
+    expect((await get("/clearance")).status).toBe(404);
+  });
+
+  test("an actor failure on either team is a 500, not a false ok", async () => {
+    app = handler({
+      ...fakes,
+      expert: (team) => ({
+        snapshot: () => fakes.expert(team).snapshot(),
+        setSensitivity: (entryId, tier) => fakes.expert(team).setSensitivity(entryId, tier),
+        setClearance: (agent, level) =>
+          team === "actuators"
+            ? Promise.reject(new Error("actor down"))
+            : fakes.expert(team).setClearance(agent, level),
+        reset: () => fakes.expert(team).reset(),
+      }),
+    });
+    expect((await change({ agent: "asker-guest", level: 1 })).status).toBe(500);
+  });
+});
+
+test("the page has the clearance and tier sections", async () => {
+  const page = await (await get("/")).text();
+  expect(page).toContain("Asker clearance, both teams");
+  expect(page).toContain("Knowledge tiers");
 });
 
 describe("POST /redteam", () => {

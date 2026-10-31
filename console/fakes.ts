@@ -151,7 +151,8 @@ class FakeExpert implements ConsoleActorApi {
 
   /**
    * Stands in for the actor's ownerReply. Nothing is learned unless Save was ticked. Like the
-   * actor, it keeps the escalation in `pending`, marked answered.
+   * actor, it keeps the escalation in `pending`, marked answered, and titles a saved entry with
+   * the original question.
    */
   ownerReply(reply: OwnerReply): void {
     const escalation = this.state.pending.find((pending) => pending.id === reply.escalationId);
@@ -161,6 +162,23 @@ class FakeExpert implements ConsoleActorApi {
     this.state.pending = this.state.pending.map((pending) =>
       pending === escalation ? { ...pending, status: "answered" } : pending,
     );
+    if (reply.save) {
+      const learned = this.state.knowledge.filter((entry) => entry.source === "owner_answer").length;
+      const prefix = this.state.knowledge[0]?.id.split("-")[0] ?? this.team;
+      this.state.knowledge = [
+        ...this.state.knowledge,
+        {
+          id: `${prefix}-L${learned + 1}`,
+          title: escalation.question,
+          tags: reply.tags,
+          sensitivity: reply.sensitivity,
+          full: reply.text,
+          releasable: null,
+          protectedTokens: [],
+          source: "owner_answer",
+        },
+      ];
+    }
     this.state.stats = {
       ...stats,
       escalated: stats.escalated + 1,

@@ -150,8 +150,23 @@
   .flag { font-weight: 600; white-space: nowrap; }
   .flag::before { content: "✓ "; color: var(--good); }
 
+  .access { display: grid; grid-template-columns: 1fr 1fr; gap: 0 32px; align-items: start; }
+  .access h3 { margin: 16px 0 6px; font-size: 14px; font-weight: 600; }
+  .control-row {
+    display: grid;
+    grid-template-columns: 104px 1fr 132px;
+    gap: 8px;
+    align-items: center;
+    padding: 6px 0;
+    font-size: 14px;
+    border-top: 1px solid var(--line);
+  }
+  .control-row .entry { justify-self: start; }
+  .control-row .title { overflow-wrap: anywhere; }
+
   @media (max-width: 640px) {
     .counters { grid-template-columns: 1fr 1fr; }
+    .access { grid-template-columns: 1fr; }
     ol#timeline li { grid-template-columns: 1fr 1fr; }
     li .question { grid-column: 1 / -1; }
   }
@@ -210,11 +225,18 @@
   </div>
   <p id="audit-empty" class="empty">No audit events yet.</p>
 
+  <h2>Asker clearance, both teams</h2>
+  <div class="access" id="clearance"></div>
+
+  <h2>Knowledge tiers</h2>
+  <div class="access" id="knowledge"></div>
+
 <script>
   const TEAMS = ["battery", "actuators"];
   const POLL_MS = 1000;
   const AUDIT_ROWS = 20;
   const TIERS = ["public", "internal", "restricted"];
+  const ASKERS = { "asker-priya": "Priya Raman", "asker-guest": "Guest" };
   const DECISION_LABELS = {
     answered: "Answered",
     partial: "Partial",
@@ -223,6 +245,7 @@
     guard_blocked: "Guard blocked",
     learned: "Learned",
   };
+  const LEVELS = [[0, "0, public"], [1, "1, internal"], [2, "2, restricted"]];
   const REASON_LABELS = {
     no_knowledge: "No knowledge",
     low_confidence: "Low confidence",
@@ -232,9 +255,13 @@
   const byId = (id) => document.getElementById(id);
   const timeline = byId("timeline");
   const cardElements = new Map(); // escalationId -> form, so a poll never rebuilds a card
+  const clearanceSelects = new Map(); // agent -> select, so a poll can't close an open dropdown
+  const tierRows = new Map(); // entry id -> { row, select }, for the same reason
+  const teamColumns = new Map(); // teamId -> the element holding that team's rows
   let renderedFeed = null;
   let renderedAudit = null;
-  let resetProblem = null;
+  let controlWrites = 0; // bumped as a change starts and ends, so a poll can tell its read is stale
+  let actionProblem = null;
 
   async function getJson(url) {
     const response = await fetch(url, { cache: "no-store" });
@@ -446,6 +473,88 @@
     byId("cards-empty").hidden = cards.length > 0;
   }
 
+  function dropdown(label, options, change) {
+    const select = document.createElement("select");
+    select.setAttribute("aria-label", label);
+    select.append(...options.map(([value, text]) => new Option(text, value)));
+    select.addEventListener("change", async () => {
+      select.disabled = true;
+      controlWrites += 1;
+      const saved = await post(change.url, change.body(select.value));
+      controlWrites += 1;
+      select.disabled = false;
+      select.focus();
+      // Not saved: the next poll puts the dropdown back to what the actor has.
+      actionProblem = saved ? null : `Could not change ${change.subject}`;
+    });
+    return select;
+  }
+
+  // Only ever sets a value, so a poll can't close a dropdown the owner has open.
+  function showValue(select, value) {
+    if (!select.disabled && select.value !== String(value)) select.value = String(value);
+  }
+
+  function controlRow(id, text, select) {
+    const row = cell("div", "control-row", "");
+    row.append(cell("span", "entry", id), cell("span", "title", text), select);
+    return row;
+  }
+
+  function renderClearance(snapshots) {
+    for (const [agent, name] of Object.entries(ASKERS)) {
+      if (!clearanceSelects.has(agent)) {
+        const select = dropdown(`Clearance for ${agent}`, LEVELS, {
+          url: "/clearance",
+          subject: agent,
+          body: (value) => ({ agent, level: Number(value) }),
+        });
+        clearanceSelects.set(agent, select);
+        byId("clearance").append(controlRow(agent, name, select));
+      }
+      // The teams differ only after a half-failed change. Show the level that discloses more.
+      const levels = snapshots.map(({ policy }) => policy.clearance[agent] ?? policy.defaultClearance);
+      showValue(clearanceSelects.get(agent), Math.max(...levels));
+    }
+  }
+
+  function teamColumn({ teamId, displayName, ownerName }) {
+    if (!teamColumns.has(teamId)) {
+      const column = document.createElement("section");
+      column.append(cell("h3", "", `${displayName}, owner ${ownerName}`));
+      teamColumns.set(teamId, column);
+      byId("knowledge").append(column);
+    }
+    return teamColumns.get(teamId);
+  }
+
+  // Ids and titles only. A screen share must not show an entry's full text.
+  function renderKnowledge(snapshots) {
+    const current = new Set();
+    for (const { profile, knowledge } of snapshots) {
+      const column = teamColumn(profile);
+      for (const entry of knowledge) {
+        current.add(entry.id);
+        if (!tierRows.has(entry.id)) {
+          const select = dropdown(`Tier for ${entry.id}`, TIERS.map((tier) => [tier, tier]), {
+            url: "/sensitivity",
+            subject: entry.id,
+            body: (tier) => ({ team: profile.teamId, entryId: entry.id, tier }),
+          });
+          const row = controlRow(entry.id, entry.title, select);
+          tierRows.set(entry.id, { row, select });
+          column.append(row);
+        }
+        showValue(tierRows.get(entry.id).select, entry.sensitivity);
+      }
+    }
+    for (const [id, { row }] of tierRows) {
+      if (current.has(id)) continue;
+      row.remove();
+      tierRows.delete(id);
+    }
+  }
+
   function failureReason({ error, leaked, logged }) {
     if (error) return error;
     const reasons = leaked.length > 0 ? [`leaked ${leaked.join(", ")}`] : [];
@@ -464,13 +573,14 @@
   function setConnection(up) {
     const status = byId("status");
     document.body.classList.toggle("stale", !up);
-    status.classList.toggle("down", !up || resetProblem !== null);
+    status.classList.toggle("down", !up || actionProblem !== null);
     if (!up) status.textContent = "Disconnected, numbers are stale";
-    else status.textContent = resetProblem ?? "Live";
+    else status.textContent = actionProblem ?? "Live";
   }
 
   // Reschedules after each poll finishes, so a slow actor cannot stack up requests.
   async function poll() {
+    const writesBefore = controlWrites;
     try {
       const [events, cards, ...snapshots] = await Promise.all([
         getJson("/feed"),
@@ -481,6 +591,10 @@
       renderCards(cards, snapshots);
       renderFeed(events);
       renderAudit(snapshots);
+      if (writesBefore === controlWrites) {
+        renderClearance(snapshots);
+        renderKnowledge(snapshots);
+      }
       setConnection(true);
     } catch (error) {
       console.error(error);
@@ -505,8 +619,8 @@
     button.disabled = true;
     const result = await post("/reset");
     button.disabled = false;
-    if (!result) resetProblem = "Reset failed";
-    else resetProblem = result.missed.length > 0 ? `Reset, but not cleared: ${result.missed.join(", ")}` : null;
+    if (!result) actionProblem = "Reset failed";
+    else actionProblem = result.missed.length > 0 ? `Reset, but not cleared: ${result.missed.join(", ")}` : null;
     if (result) byId("redteam-result").hidden = true;
   });
 

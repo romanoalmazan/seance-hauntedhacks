@@ -4,6 +4,7 @@ import { z } from "zod";
 import { createCards, ownerReplyInput, TEAMS } from "./escalations";
 import { createFakes, type DevHooks } from "./fakes";
 import { askGuest, redteam } from "../scripts/redteam";
+import { askSchema, ownerReplySchema } from "../shared/protocol";
 import type { RelayClient } from "../shared/protocol";
 import type { ConsoleActorApi, FeedApi, TeamId } from "../shared/types";
 
@@ -40,6 +41,17 @@ const devEventSchema = z.object({
   entriesUsed: z.array(z.string()).optional(),
   entriesWithheld: z.array(z.string()).optional(),
   leakPrevented: z.boolean().optional(),
+});
+
+const sensitivityInput = z.object({
+  team: askSchema.shape.to,
+  entryId: z.string().min(1),
+  tier: ownerReplySchema.shape.sensitivity,
+});
+
+const clearanceInput = z.object({
+  agent: z.enum(["asker-priya", "asker-guest"]),
+  level: z.union([z.literal(0), z.literal(1), z.literal(2)]),
 });
 
 const json = (body: unknown, status = 200) => Response.json(body, { status });
@@ -80,6 +92,27 @@ export function handler(deps: ConsoleDeps) {
     return json({ ok: true });
   }
 
+  async function setSensitivity(req: Request): Promise<Response> {
+    const parsed = sensitivityInput.safeParse(await req.json().catch(() => null));
+    if (!parsed.success) return json({ error: "invalid tier change" }, 400);
+    const { team, entryId, tier } = parsed.data;
+    const expert = deps.expert(team);
+    // The actor ignores an id it doesn't know, which would read here as a success.
+    const { knowledge } = await expert.snapshot();
+    if (!knowledge.some((entry) => entry.id === entryId)) return json({ error: "no such entry" }, 404);
+    await expert.setSensitivity(entryId, tier);
+    return json({ ok: true });
+  }
+
+  /** Policy lives on each expert. One control sets both, so an asker has one clearance. */
+  async function setClearance(req: Request): Promise<Response> {
+    const parsed = clearanceInput.safeParse(await req.json().catch(() => null));
+    if (!parsed.success) return json({ error: "invalid clearance" }, 400);
+    const { agent, level } = parsed.data;
+    await Promise.all(TEAMS.map((team) => deps.expert(team).setClearance(agent, level)));
+    return json({ ok: true });
+  }
+
   async function route(req: Request): Promise<Response> {
     const { pathname } = new URL(req.url);
 
@@ -102,6 +135,8 @@ export function handler(deps: ConsoleDeps) {
         return json({ ok: true, missed: await (deps.resetAskers ?? resetAskers)() });
       }
       if (pathname === "/owner-reply") return ownerReply(req);
+      if (pathname === "/sensitivity") return setSensitivity(req);
+      if (pathname === "/clearance") return setClearance(req);
       if (pathname === "/redteam") {
         return json(
           await redteam({
