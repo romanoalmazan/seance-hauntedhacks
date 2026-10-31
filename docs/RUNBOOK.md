@@ -1,8 +1,37 @@
 # Runbook
 
+## Start, reset, stop
+
+From the repo root:
+
+```sh
+scripts/demo.sh        # starts everything on one laptop with REAL=1 and prints the URLs
+scripts/demo.sh stop   # stops what it started, plus any detached bridge
+```
+
+`demo.sh` refuses to start if a demo port (8787, 7100, 3000, 3001, 3002) is taken, and cleans up after itself if a step fails, printing the last lines of that step's log. Its PIDs are in `/tmp/liaison-demo.pids`. If `stop` says a port is still listening, something was restarted by hand and isn't in that file: use the `pkill` lines under "Stop everything".
+
+**Reset before every run.** Press **Reset** on the console. Both experts, the feed and the open cards go back to the seed, learned entries are removed, and both chat pages clear themselves. Don't reload them.
+
+`bun scripts/reset.ts` does the same from a terminal, with one difference: it can't clear the Red team result or the status line on an open console page, because those live only in the page. Use the button during a demo.
+
+If the console's status says `Reset, but not cleared: asker-guest` (the script says the same and exits 1), the experts were reset but that chat's server is down. Start it with `REAL=1 nohup bun asker/server.ts asker-guest > asker-guest.log 2>&1 &`, give the page a few seconds to reconnect by itself, and press Reset again.
+
+`bun scripts/redteam.ts` runs the six attacks from a terminal and exits non-zero if any fails. The console's **Red team** button runs the same check. A failed prompt shows why: a leaked token, no audit entry, or the Guest asker not running.
+
+The operator's word-for-word script is `demo-script.txt`.
+
+## Three most likely failures
+
+These are the likely ones from SPEC §15. The stack already runs on its other fallbacks: local Terse dev server, local Relay engine, one laptop.
+
+1. **The model makes the beats drag.** Answers take several seconds, or the expert keeps escalating (a failed model call escalates). Set a smaller, faster model in `OPENAI_MODEL` in `.env`, then run `scripts/demo.sh stop` and `scripts/demo.sh`, because the actor reads it at start. Warm it with one question before the demo, then Reset. If the model can't be fixed in time, empty `OPENAI_API_KEY` and `OPENAI_MODEL`: the offline drafter needs no network and the beats still pass.
+2. **The venue Wi-Fi is bad.** Only the model call needs the network, because Relay and Terse are local here. Move the laptop to a phone hotspot. Failing that, use the offline drafter as above.
+3. **The demo drifts under pressure.** A wrong prompt, a stale screen or a beat that goes sideways. Use the fixed prompts in `demo-script.txt`, press Reset and restart the beat. If a beat still won't run, play the backup recording from 15:15.
+
 ## Running the real stack
 
-Everything runs on one laptop, from the repo root. Logs land in the repo root as `*.log` (gitignored). Each block below was run as written.
+`scripts/demo.sh` runs all of this. These are the same steps by hand. Everything runs on one laptop, from the repo root. Logs land in the repo root as `*.log` (gitignored). Each block below was run as written.
 
 ### Once per machine
 
@@ -59,9 +88,7 @@ Each server prints which mode it is in: `using the real Relay`, or `(real stack)
 
 ### 4. Before every run
 
-Press **Reset** on the console. It resets both experts and the feed, and removes learned entries and open cards.
-
-Reset doesn't touch the chat pages yet, so reload ports 3001 and 3002 after it.
+Press **Reset** on the console. See "Start, reset, stop" above.
 
 ### Beat 2½ by hand
 
