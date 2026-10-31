@@ -5,110 +5,174 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Séance</title>
 <style>
+  /* Séance identity: the console uses the same tokens, wordmark and masthead. */
   :root {
-    --bg: #14121a; --panel: #1d1a26; --raised: #272334; --line: #363047;
-    --text: #ece9f2; --muted: #a39db3; --accent: #b79cff;
-    --ok: #6fd6a1; --warn: #f0c36b; --bad: #f08a8a; --wait: #8ab8f0;
+    color-scheme: dark;
+    --bg: #121018; --panel: #1c1926; --raised: #282338; --line: #423a58;
+    --text: #f4f1f9; --muted: #c9c3d6; --accent: #c6b3ff; --on-fill: #15121c;
+    --ok: #7be0ab; --warn: #f6cc72; --bad: #ff9c95; --wait: #9ac5f8;
+    --text-sm: 16px; --text-md: 18px; --text-lg: 21px; --text-xl: 30px;
   }
   * { box-sizing: border-box; }
   html, body { height: 100%; margin: 0; }
+  ::selection { background: var(--accent); color: var(--on-fill); }
+  * { scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
   body {
-    display: grid; grid-template-columns: 280px 1fr;
+    display: grid; grid-template-columns: 280px minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr);
     background: var(--bg); color: var(--text);
-    font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+    font: var(--text-md)/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
   }
+
+  .masthead {
+    grid-column: 1 / -1; display: flex; align-items: baseline; gap: 14px;
+    padding: 10px 24px; background: var(--panel); border-bottom: 1px solid var(--line);
+  }
+  .masthead h1 {
+    margin: 0; font: 600 var(--text-xl)/1.2 "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+    color: var(--accent);
+  }
+  .org { color: var(--muted); font-size: var(--text-sm); font-weight: 600; }
+  .view { margin-left: auto; display: flex; align-items: baseline; gap: 12px; min-width: 0; }
+  .view strong { font-size: var(--text-lg); font-weight: 700; white-space: nowrap; }
+  #me { margin: 0; color: var(--muted); font-size: var(--text-sm); }
+
   aside {
     background: var(--panel); border-right: 1px solid var(--line);
     padding: 20px; overflow-y: auto;
   }
-  aside h1 { margin: 0; font-size: 22px; font-weight: 600; }
-  #me { margin: 2px 0 24px; color: var(--muted); font-size: 13px; }
-  aside h2 {
-    margin: 0 0 8px; color: var(--muted); font-size: 12px; font-weight: 600;
-    letter-spacing: .06em; text-transform: uppercase;
-  }
-  #teams { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+  aside h2 { margin: 0 0 10px; color: var(--text); font-size: var(--text-sm); font-weight: 700; }
+  #teams { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+  #teams:empty::before { content: "Loading teams…"; color: var(--muted); font-size: var(--text-sm); }
+  #teams.unavailable:empty::before { content: "The team list didn't load."; }
   .team {
     width: 100%; padding: 10px 12px; text-align: left; cursor: pointer;
     background: var(--raised); color: inherit; font: inherit;
     border: 1px solid var(--line); border-radius: 8px;
+    transition: border-color .15s ease-out;
   }
   .team:hover { border-color: var(--accent); }
-  .team b { display: block; color: var(--accent); font-weight: 600; }
-  .team small { display: block; color: var(--muted); font-size: 12.5px; line-height: 1.4; }
-  .aside-note { margin: 16px 0 0; color: var(--muted); font-size: 12.5px; }
+  .team b { display: block; color: var(--accent); font-weight: 700; }
+  .team small { display: block; color: var(--muted); font-size: var(--text-sm); line-height: 1.35; }
+  .aside-note { margin: 16px 0 0; color: var(--muted); font-size: var(--text-sm); line-height: 1.35; }
 
-  main { display: grid; grid-template-rows: 1fr auto; min-height: 0; height: 100vh; }
-  #log { display: flex; flex-direction: column; gap: 12px; padding: 24px; overflow-y: auto; }
+  main { display: grid; grid-template-rows: minmax(0, 1fr) auto; grid-template-columns: minmax(0, 1fr); min-height: 0; }
+  #log {
+    grid-row: 1; grid-column: 1; display: flex; flex-direction: column; gap: 14px;
+    padding: 20px 24px; overflow-y: auto;
+  }
+  #empty { display: none; grid-row: 1; grid-column: 1; align-self: center; justify-self: center; padding: 24px; max-width: 34em; }
+  #log:empty + #empty { display: block; }
+  #empty h2 { margin: 0 0 6px; font-size: var(--text-lg); font-weight: 700; }
+  #empty p { margin: 0; color: var(--muted); }
   .bubble {
-    max-width: min(720px, 90%); padding: 10px 14px; border-radius: 12px;
+    max-width: min(760px, 90%); padding: 10px 16px; border-radius: 12px;
     white-space: pre-wrap; overflow-wrap: anywhere;
   }
-  .bubble.user { align-self: flex-end; background: #3c3159; }
-  .bubble.agent { align-self: flex-start; background: var(--panel); border: 1px solid var(--line); }
+  .bubble.user { flex: none; align-self: flex-end; background: #41346a; }
+  .bubble.user::before { content: "You"; display: block; color: var(--accent); font-size: var(--text-sm); font-weight: 700; }
+  .bubble.agent { flex: none; align-self: flex-start; background: var(--panel); border: 1px solid var(--line); }
+  /* Each team's reply stands on its own; two teams sit side by side so beat 1 fits one screen. */
+  .bubble.agent:has(.part) {
+    display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; align-self: stretch;
+    max-width: 760px; padding: 0; background: none; border: 0;
+  }
+  .bubble.agent:has(.part + .part) { grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: none; }
   .bubble.agent.waiting { color: var(--muted); }
+  .bubble.agent.waiting::before {
+    content: ""; display: inline-block; width: 12px; height: 12px; margin-right: 10px;
+    border-radius: 50%; background: var(--wait); animation: pulse 1.4s ease-in-out infinite;
+  }
   .bubble.agent.failed { border-color: var(--bad); color: var(--bad); }
 
   .notice { margin: 0 0 8px; color: var(--warn); }
   .notice:last-child { margin-bottom: 0; }
-  .part + .part { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
-  .part-head { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
-  .part-head b { font-weight: 600; }
-  .confidence { margin-left: auto; color: var(--muted); font-size: 12.5px; }
+  .bubble.agent:has(.part) .notice { grid-column: 1 / -1; margin: 0; }
+  .part { min-width: 0; padding: 12px 16px 14px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; }
+  .part.partial { border-color: var(--warn); }
+  .part.refused { border-color: var(--bad); }
+  .part.escalated { border-color: var(--wait); background: #1b2433; }
+  .part.owner { border-color: var(--accent); background: #2a2340; animation: arrive 1.6s cubic-bezier(.16, 1, .3, 1); }
+  @keyframes arrive { from { background: #54418f; } }
+  .part-head { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin-bottom: 6px; }
+  .part-head b { font-size: var(--text-lg); font-weight: 700; }
+  .confidence { margin-left: auto; color: var(--muted); font-size: var(--text-sm); font-variant-numeric: tabular-nums; }
   .pill {
-    padding: 1px 8px; border: 1px solid currentColor; border-radius: 999px;
-    font-size: 12px; font-weight: 600; line-height: 1.5;
+    padding: 2px 12px; border-radius: 999px; color: var(--on-fill); background: var(--muted);
+    font-size: var(--text-sm); font-weight: 700; line-height: 1.5; white-space: nowrap;
   }
-  .pill.answered { color: var(--ok); }
-  .pill.partial { color: var(--warn); }
-  .pill.refused { color: var(--bad); }
-  .pill.escalated { color: var(--wait); }
-  .pill.none { color: var(--muted); }
-  .pill.owner { color: var(--accent); }
-  .waiting-note { display: flex; align-items: baseline; gap: 8px; }
+  .pill.answered { background: var(--ok); }
+  .pill.partial { background: var(--warn); }
+  .pill.refused { background: var(--bad); }
+  .pill.escalated { background: var(--wait); }
+  .pill.owner { background: var(--accent); }
+  .waiting-note { display: flex; align-items: baseline; gap: 10px; }
   .waiting-dot {
-    flex: none; width: 8px; height: 8px; border-radius: 50%;
+    flex: none; width: 12px; height: 12px; border-radius: 50%;
     background: var(--wait); animation: pulse 1.4s ease-in-out infinite;
   }
   @keyframes pulse { 50% { opacity: .25; } }
-  @media (prefers-reduced-motion: reduce) { .waiting-dot { animation: none; } }
-  .sources { margin: 6px 0 0; color: var(--muted); font-size: 13px; }
-  .withheld {
-    margin: 8px 0 0; padding: 6px 10px; font-size: 13px;
-    background: var(--raised); border-left: 2px solid var(--warn); border-radius: 4px;
+  @media (prefers-reduced-motion: reduce) {
+    .waiting-dot, .bubble.agent.waiting::before, .part.owner { animation: none; }
   }
-  .withheld ul { margin: 2px 0 0; padding-left: 18px; color: var(--muted); }
-  .withheld p { margin: 4px 0 0; }
+  .sources { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 10px 0 0; font-size: var(--text-sm); line-height: 1.3; }
+  .sources-label { color: var(--muted); font-weight: 600; margin-right: 2px; }
+  .chip { padding: 2px 10px; color: var(--text); background: var(--raised); border: 1px solid var(--line); border-radius: 6px; }
+  .chip b { color: var(--accent); font-weight: 700; font-variant-numeric: tabular-nums; }
+  .withheld {
+    margin: 10px 0 0; padding: 8px 12px; font-size: var(--text-sm);
+    background: var(--bg); border: 1px dashed var(--warn); border-radius: 8px;
+  }
+  .withheld-count { color: var(--warn); font-size: var(--text-md); font-weight: 700; }
+  .withheld ul { margin: 2px 0 0; padding-left: 20px; }
+  .withheld p { margin: 4px 0 0; font-weight: 600; }
 
-  form { display: flex; gap: 8px; padding: 16px 24px; border-top: 1px solid var(--line); }
+  form { display: flex; gap: 10px; padding: 12px 24px 16px; border-top: 1px solid var(--line); }
   #input {
-    flex: 1; min-width: 0; padding: 10px 12px; font: inherit; color: inherit;
+    flex: 1; min-width: 0; padding: 10px 14px; font: inherit; color: inherit; caret-color: var(--accent);
     background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
   }
+  #input::placeholder { color: var(--muted); opacity: 1; }
   #input:focus-visible, .team:focus-visible, form button:focus-visible {
     outline: 2px solid var(--accent); outline-offset: 1px;
   }
   form button {
-    padding: 0 18px; font: inherit; font-weight: 600; cursor: pointer;
-    color: var(--bg); background: var(--accent); border: 0; border-radius: 8px;
+    padding: 0 24px; font: inherit; font-weight: 700; cursor: pointer;
+    color: var(--on-fill); background: var(--accent); border: 0; border-radius: 8px;
+    transition: background-color .15s ease-out;
   }
+  form button:hover { background: #d9ccff; }
   @media (max-width: 720px) {
-    body { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
-    aside { border-right: 0; border-bottom: 1px solid var(--line); max-height: 40vh; }
-    main { height: auto; min-height: 0; }
+    body { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto minmax(0, 1fr); }
+    .masthead { flex-wrap: wrap; padding: 10px 16px; }
+    #me { display: none; }
+    aside { border-right: 0; border-bottom: 1px solid var(--line); max-height: 30vh; }
+    .bubble.agent:has(.part + .part) { grid-template-columns: minmax(0, 1fr); }
+    .bubble { max-width: 100%; }
+    #log { padding: 16px; }
+    form { padding: 12px 16px; }
   }
 </style>
 </head>
 <body>
-<aside>
+<header class="masthead">
   <h1>Séance</h1>
-  <p id="me"></p>
+  <span class="org">Acme Robotics</span>
+  <div class="view">
+    <strong id="view">Chat</strong>
+    <p id="me"></p>
+  </div>
+</header>
+<aside>
   <h2>Team directory</h2>
   <ul id="teams"></ul>
   <p class="aside-note">You pick the team. Your agent never guesses. Click one to address it.</p>
 </aside>
 <main>
   <div id="log" aria-live="polite"></div>
+  <div id="empty">
+    <h2>Ask a team</h2>
+    <p>Type @ and the team's name, then your question. Answers come from that team's expert, at your access level.</p>
+  </div>
   <form id="form">
     <input id="input" aria-label="Your question" autocomplete="off" autofocus
            placeholder="@actuators What peak current can I draw?">
@@ -147,13 +211,14 @@
 
     if (!answer) {
       head.append(el("span", "pill none", "no answer"));
-      part.append(el("div", "", error ?? "No answer yet."));
+      part.append(el("div", "", error ?? "No answer yet. Try asking again."));
       return part;
     }
 
     const fromOwner = answer.provenance === "owner";
     const owner = answer.ownerName ?? teamOwners[team] ?? "the owner";
     const waiting = !fromOwner && answer.status === "escalated";
+    part.classList.add(fromOwner ? "owner" : answer.status);
     if (fromOwner) head.append(el("span", "pill owner", `${owner}'s answer`));
     else head.append(el("span", `pill ${answer.status}`, answer.status));
     // A score only means something on an answer the model wrote.
@@ -171,11 +236,18 @@
     }
 
     if (answer.sources.length > 0) {
-      const sources = answer.sources.map((s) => `${s.id} ${s.title}`).join(" · ");
-      part.append(el("p", "sources", `Sources: ${sources}`));
+      const sources = el("p", "sources");
+      sources.append(el("span", "sources-label", "Sources"));
+      for (const s of answer.sources) {
+        const chip = el("span", "chip");
+        chip.append(el("b", "", s.id), ` ${s.title}`);
+        sources.append(chip);
+      }
+      part.append(sources);
     }
     if (answer.withheld.count > 0) {
-      const withheld = el("div", "withheld", `${answer.withheld.count} withheld`);
+      const withheld = el("div", "withheld");
+      withheld.append(el("span", "withheld-count", `${answer.withheld.count} withheld`));
       if (answer.withheld.hints.length > 0) {
         const hints = el("ul");
         for (const hint of answer.withheld.hints) hints.append(el("li", "", hint));
@@ -214,7 +286,7 @@
       renderReply(bubble, reply);
     } catch (err) {
       bubble.className = "bubble agent failed";
-      bubble.textContent = `Couldn't ask: ${err.message}`;
+      bubble.textContent = `Couldn't ask: ${err.message}\nCheck that this chat's server is running, then send your question again.`;
     }
   }
 
@@ -235,7 +307,9 @@
   async function loadDirectory() {
     const { me, teams } = await (await fetch("/directory")).json();
     document.getElementById("me").textContent = `${me.human} · ${me.team}`;
-    document.title = `Séance · ${me.human}`;
+    const view = `${me.human.split(" ")[0]}'s chat`;
+    document.getElementById("view").textContent = view;
+    document.title = `Séance · ${view}`;
     const list = document.getElementById("teams");
     for (const team of teams) {
       teamNames[team.teamId] = team.displayName;
@@ -270,7 +344,10 @@
     input.value = "";
   });
 
-  loadDirectory().catch((err) => addBubble("agent failed", `Couldn't load the directory: ${err.message}`));
+  loadDirectory().catch((err) => {
+    document.getElementById("teams").classList.add("unavailable");
+    addBubble("agent failed", `Couldn't load the team directory: ${err.message}\nYou can still ask by typing @battery or @actuators.`);
+  });
 </script>
 </body>
 </html>
