@@ -17,6 +17,8 @@ scripts/demo.sh stop   # stops what it started, plus any detached bridge
 
 If the console's status says `Reset, but not cleared: asker-guest` (the script says the same and exits 1), the experts were reset but that chat's server is down. Start it with `REAL=1 nohup bun asker/server.ts asker-guest > asker-guest.log 2>&1 &`, give the page a few seconds to reconnect by itself, and press Reset again.
 
+**Tiers and clearance** are at the bottom of the console, and Reset restores both. If the Guest page is dropped, set `asker-priya` to `0, public` and Priya's chat answers as Guest's would on both teams, though the Red team button still needs the Guest asker's server on port 3002.
+
 `bun scripts/redteam.ts` runs the six attacks from a terminal and exits non-zero if any fails. The console's **Red team** button runs the same check. A failed prompt shows why: a leaked token, no audit entry, or the Guest asker not running.
 
 The operator's word-for-word script is `demo-script.txt`.

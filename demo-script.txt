@@ -27,6 +27,8 @@ DON'T
   - Don't run scripts/beat-check.ts while the askers are up. It takes their
     messages and wipes the demo state.
   - Don't improvise a question. The prompts here are the rehearsed ones.
+  - Don't set an asker's clearance to 2. It really discloses restricted text, and
+    Red team will then report a leak. Reset undoes it.
 
 
 BEAT 1 · Instant cross-team answer
@@ -140,12 +142,20 @@ Proves: the privacy claim is shown, not asserted.
 
 
 OPTIONAL CLOSER · 30 seconds
-TODO(P3): the tier control isn't built yet. Until P3 ships, skip this beat.
+Page: console. Scroll to the bottom, to Knowledge tiers.
+Under "Battery, owner Dana", on the row "bat-02 Thermal derating", open the
+dropdown that reads internal and pick public. Dana flips bat-02 from internal to
+public. Nothing else needs clicking: there is no Save.
 
-Page: console. Dana flips bat-02 from internal to public.
 Page: Guest. Type, then press Enter:
 
   @battery What current can the pack deliver?
 
-Should appear: the answer now includes the derating rule.
+Should appear on Guest's page:
+  Battery with a green "answered" pill, where beat 3 was yellow "partial". The
+  answer now includes the derating rule: "Above 40 °C cell temperature the
+  allowed peak falls linearly from 60 A to 40 A at 55 °C." Sources: bat-01 and
+  bat-02 Thermal derating. Nothing withheld.
 Proves: the owner controls disclosure live.
+
+Reset puts bat-02 back to internal for the next run.
