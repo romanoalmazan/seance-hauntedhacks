@@ -2,8 +2,12 @@
 // (expert, feed), so the real wrappers replace these without touching the server.
 import batterySeed from "../seed/battery.json";
 import actuatorsSeed from "../seed/actuators.json";
+import { encode, parseMessage, PROTOCOL_VERSION } from "../shared/protocol";
+import type { Message, OwnerReply, RelayClient } from "../shared/protocol";
 import type {
+  AuditEvent,
   ConsoleActorApi,
+  Escalation,
   EventKind,
   FeedApi,
   FeedEvent,
@@ -22,6 +26,7 @@ interface Seed {
 const SEEDS = { battery: batterySeed, actuators: actuatorsSeed } as Record<TeamId, Seed>;
 
 const FEED_LIMIT_DEFAULT = 50;
+const AUDIT_LIMIT = 200; // SPEC §9
 
 // Assumption for the fake only: a partial answer still reached the asker with no human
 // involved, so it counts as answered automatically. The real numbers come from the actor.
@@ -135,6 +140,37 @@ class FakeExpert implements ConsoleActorApi {
     if (repeat) stats.repeatsServed += 1;
     this.state.stats = stats;
   }
+
+  record(event: AuditEvent): void {
+    this.state.audit = [...this.state.audit, event].slice(-AUDIT_LIMIT);
+  }
+
+  escalate(escalation: Escalation): void {
+    this.state.pending = [...this.state.pending, escalation];
+  }
+
+  /** Stands in for the actor's ownerReply. Nothing is learned unless Save was ticked. */
+  ownerReply(reply: OwnerReply): void {
+    const escalation = this.state.pending.find((pending) => pending.id === reply.escalationId);
+    if (!escalation) return;
+
+    const stats = this.state.stats;
+    this.state.pending = this.state.pending.filter((pending) => pending !== escalation);
+    this.state.stats = {
+      ...stats,
+      escalated: stats.escalated + 1,
+      learned: stats.learned + (reply.save ? 1 : 0),
+    };
+    this.record({
+      time: reply.at,
+      asker: escalation.asker,
+      question: escalation.question,
+      decision: reply.save ? "learned" : "answered",
+      entriesUsed: [],
+      entriesWithheld: [],
+      leakPrevented: false,
+    });
+  }
 }
 
 class FakeFeed implements FeedApi {
@@ -153,29 +189,110 @@ class FakeFeed implements FeedApi {
   }
 }
 
-export interface DevHooks {
-  /** Pushes the event and bumps that team's stats. `repeat` also counts a repeat served. */
-  event(event: FeedEvent, options?: { repeat?: boolean }): Promise<void>;
+type RelayHandler = Parameters<RelayClient["onMessage"]>[0];
+
+/** The console's end of Relay. Whatever it sends goes straight to `onOwnerReply`. */
+class FakeRelay implements RelayClient {
+  readonly agent = "console";
+  sent: { to: string; msg: Message }[] = [];
+  private handlers: RelayHandler[] = [];
+
+  constructor(private readonly onOwnerReply: (to: string, reply: OwnerReply) => void) {}
+
+  onMessage(handler: RelayHandler): void {
+    this.handlers = [...this.handlers, handler];
+  }
+
+  // Round-trips the wire format, so a message the real schema rejects fails here too.
+  async send(to: string, msg: Message): Promise<void> {
+    const wire = parseMessage(encode(msg));
+    if (!wire) throw new Error(`[fake relay] invalid ${msg.kind} to ${to}`);
+    this.sent = [...this.sent, { to, msg: wire }];
+    if (wire.kind === "owner_reply") this.onOwnerReply(to, wire);
+  }
+
+  /** `sender` is what Relay would stamp. Not parsed first, so tests can deliver bad messages. */
+  async deliver(msg: Message, sender: string): Promise<void> {
+    for (const handler of this.handlers) await handler(msg, { sender });
+  }
+
+  async close(): Promise<void> {}
 }
 
-/** One isolated world: an expert per team, one feed, and the dev hook that drives them. */
+export interface DevEventOptions {
+  /** Also counts a repeat served. */
+  repeat?: boolean;
+  entriesUsed?: string[];
+  entriesWithheld?: string[];
+  leakPrevented?: boolean;
+}
+
+export interface DevHooks {
+  /** Pushes the event, bumps that team's stats and writes its audit event. */
+  event(event: FeedEvent, options?: DevEventOptions): Promise<void>;
+  /** Delivers the beat 2 notice through the fake relay. Returns the new escalation's id. */
+  escalate(): Promise<string>;
+}
+
+/** One isolated world: an expert per team, one feed, the relay, and the dev hooks that drive them. */
 export function createFakes() {
   const experts: Record<TeamId, FakeExpert> = {
     battery: new FakeExpert("battery"),
     actuators: new FakeExpert("actuators"),
   };
   const timeline = new FakeFeed();
+  const relay = new FakeRelay((to, reply) => {
+    experts[to.replace(/^expert-/, "") as TeamId].ownerReply(reply);
+  });
+  let escalations = 0;
 
   const dev: DevHooks = {
-    async event(event, options) {
+    async event(event, options = {}) {
       timeline.push(event);
-      experts[event.team].bump(event.decision, options?.repeat ?? false);
+      const expert = experts[event.team];
+      expert.bump(event.decision, options.repeat ?? false);
+      expert.record({
+        time: event.time,
+        asker: event.asker,
+        question: event.question,
+        decision: event.decision,
+        entriesUsed: options.entriesUsed ?? [],
+        entriesWithheld: options.entriesWithheld ?? [],
+        leakPrevented: options.leakPrevented ?? event.decision === "guard_blocked", // SPEC §7
+      });
+    },
+
+    async escalate() {
+      escalations += 1;
+      const requestId = `req-${escalations}`;
+      const escalation: Escalation = {
+        id: `esc-${escalations}`,
+        requestId,
+        asker: "asker-priya",
+        question: "Does ACT-7 support regenerative braking into the pack?",
+        reason: "no_knowledge",
+        status: "pending",
+      };
+      experts.actuators.escalate(escalation);
+      await relay.deliver(
+        {
+          v: PROTOCOL_VERSION,
+          kind: "escalation_notice",
+          requestId,
+          at: new Date().toISOString(),
+          teamId: "actuators",
+          escalation,
+        },
+        "expert-actuators",
+      );
+      return escalation.id;
     },
   };
 
   return {
     expert: (team: TeamId): ConsoleActorApi => experts[team],
     feed: (): FeedApi => timeline,
+    relay,
     dev,
   };
 }

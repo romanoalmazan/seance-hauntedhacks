@@ -20,7 +20,7 @@
   * { box-sizing: border-box; }
   body {
     margin: 0 auto;
-    max-width: 960px;
+    max-width: 1120px;
     padding: 24px;
     background: var(--surface);
     color: var(--ink);
@@ -44,21 +44,64 @@
   button:hover:not(:disabled) { border-color: var(--ink-3); }
   button:disabled { opacity: 0.6; cursor: default; }
 
-  .counters { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; }
+  .counters { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
   .tile {
-    grid-column: span 2;
     padding: 14px 16px;
     background: var(--panel);
     border: 1px solid var(--line);
     border-radius: 8px;
   }
-  .tile.hero { grid-column: span 3; padding: 18px 20px; }
+  .tile.hero { padding: 18px 20px; }
   .tile .label { font-size: 14px; color: var(--ink-2); }
   .tile .value { font-size: 32px; font-weight: 600; font-variant-numeric: tabular-nums; }
   .tile.hero .value { font-size: 56px; line-height: 1.1; }
+  .tile .caption { font-size: 13px; color: var(--ink-3); }
   body.stale .value { color: var(--ink-3); }
 
-  ol#timeline { list-style: none; margin: 0; padding: 0; }
+  .decision {
+    justify-self: start;
+    display: inline-block;
+    padding: 0 9px;
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    border: 1px solid var(--mark, var(--ink-3));
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--mark, var(--ink-3)) 22%, transparent);
+  }
+  .decision.answered, .decision.partial { --mark: var(--good); }
+  .decision.escalated { --mark: var(--warning); }
+  .decision.learned { --mark: var(--accent); }
+  .decision.guard_blocked, .decision.refused { --mark: var(--critical); }
+  .empty { margin: 0; color: var(--ink-3); padding: 10px 0; border-top: 1px solid var(--line); }
+
+  .card {
+    margin-bottom: 12px;
+    padding: 16px;
+    background: var(--panel);
+    border: 1px solid var(--warning);
+    border-radius: 8px;
+  }
+  .card fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
+  .card-meta { display: flex; flex-wrap: wrap; gap: 4px 20px; font-size: 14px; color: var(--ink-2); }
+  .card-question { margin: 6px 0 12px; font-size: 18px; overflow-wrap: anywhere; }
+  .card-controls { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; margin-top: 12px; }
+  .card-note { font-size: 14px; color: var(--ink-2); padding-bottom: 7px; }
+  .field { display: grid; gap: 4px; font-size: 13px; color: var(--ink-2); }
+  .field.grow { flex: 1 1 200px; }
+  .check { display: flex; align-items: center; gap: 6px; font-size: 14px; padding-bottom: 7px; }
+  textarea, select, input[type="text"] {
+    width: 100%;
+    padding: 6px 8px;
+    font: inherit;
+    color: var(--ink);
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+  }
+  textarea { resize: vertical; }
+
+  ol#timeline { list-style: none; margin: 0; padding: 0; max-height: 360px; overflow-y: auto; }
   ol#timeline li {
     display: grid;
     grid-template-columns: 72px 184px 128px 1fr;
@@ -68,20 +111,42 @@
     border-top: 1px solid var(--line);
   }
   .time, .asker { font-size: 14px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
-  .route { font-size: 14px; color: var(--ink-2); }
   .question { overflow-wrap: anywhere; }
-  .decision { display: block; font-size: 14px; font-weight: 600; color: var(--ink-2); }
-  .decision::before { content: "●"; margin-right: 6px; font-size: 11px; color: var(--mark, var(--ink-3)); }
-  .decision.answered, .decision.partial { --mark: var(--good); }
-  .decision.escalated { --mark: var(--warning); }
-  .decision.learned { --mark: var(--accent); }
-  .decision.guard_blocked, .decision.refused { --mark: var(--critical); }
-  #empty { color: var(--ink-3); padding: 10px 0; border-top: 1px solid var(--line); }
+
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th {
+    padding: 0 12px 6px 0;
+    font-size: 13px;
+    font-weight: 600;
+    text-align: left;
+    white-space: nowrap;
+    color: var(--ink-3);
+  }
+  td { padding: 10px 12px 10px 0; vertical-align: top; border-top: 1px solid var(--line); }
+  td.muted { white-space: nowrap; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+  td.question { min-width: 220px; }
+  .entries { display: flex; flex-wrap: wrap; gap: 4px; }
+  .entry {
+    padding: 0 6px;
+    font: 13px ui-monospace, SFMono-Regular, Menlo, monospace;
+    white-space: nowrap;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+  }
+  .entry.restricted {
+    font-weight: 600;
+    border-color: var(--critical);
+    background: color-mix(in srgb, var(--critical) 22%, transparent);
+  }
+  .none { color: var(--ink-3); }
+  .flag { font-weight: 600; white-space: nowrap; }
+  .flag::before { content: "✓ "; color: var(--good); }
 
   @media (max-width: 640px) {
-    .tile, .tile.hero { grid-column: span 3; }
+    .counters { grid-template-columns: 1fr 1fr; }
     ol#timeline li { grid-template-columns: 1fr 1fr; }
-    .question { grid-column: 1 / -1; }
+    li .question { grid-column: 1 / -1; }
   }
 </style>
 </head>
@@ -94,19 +159,50 @@
 
   <section class="counters" aria-label="Counters, both teams combined">
     <div class="tile hero"><div class="label">Interruptions avoided</div><div class="value" id="interruptions">–</div></div>
-    <div class="tile hero"><div class="label">Leaks blocked</div><div class="value" id="leaks">–</div></div>
+    <div class="tile hero"><div class="label">Requests refused</div><div class="value" id="refused">–</div></div>
+    <div class="tile hero">
+      <div class="label">Guard catches</div>
+      <div class="value" id="guard">–</div>
+      <div class="caption">0 means restricted text never reached the model</div>
+    </div>
     <div class="tile"><div class="label">Asked</div><div class="value" id="asked">–</div></div>
     <div class="tile"><div class="label">Learned</div><div class="value" id="learned">–</div></div>
     <div class="tile"><div class="label">Repeats served</div><div class="value" id="repeats">–</div></div>
   </section>
 
+  <h2>Escalations</h2>
+  <div id="cards"></div>
+  <p id="cards-empty" class="empty">No open escalations.</p>
+
   <h2>Timeline</h2>
   <ol id="timeline"></ol>
-  <p id="empty" hidden>No questions yet.</p>
+  <p id="timeline-empty" class="empty" hidden>No questions yet.</p>
+
+  <h2>Audit log, newest 20 across both teams</h2>
+  <div class="table-wrap" id="audit-wrap" hidden>
+    <table>
+      <thead>
+        <tr>
+          <th scope="col">Time</th>
+          <th scope="col">Team</th>
+          <th scope="col">Asker</th>
+          <th scope="col">Question</th>
+          <th scope="col">Decision</th>
+          <th scope="col">Used</th>
+          <th scope="col">Withheld</th>
+          <th scope="col">Leak prevented</th>
+        </tr>
+      </thead>
+      <tbody id="audit"></tbody>
+    </table>
+  </div>
+  <p id="audit-empty" class="empty">No audit events yet.</p>
 
 <script>
   const TEAMS = ["battery", "actuators"];
   const POLL_MS = 1000;
+  const AUDIT_ROWS = 20;
+  const TIERS = ["public", "internal", "restricted"];
   const DECISION_LABELS = {
     answered: "Answered",
     partial: "Partial",
@@ -115,10 +211,17 @@
     guard_blocked: "Guard blocked",
     learned: "Learned",
   };
+  const REASON_LABELS = {
+    no_knowledge: "No knowledge",
+    low_confidence: "Low confidence",
+    access_request: "Access request",
+  };
 
   const byId = (id) => document.getElementById(id);
   const timeline = byId("timeline");
+  const cardElements = new Map(); // escalationId -> form, so a poll never rebuilds a card
   let renderedFeed = null;
+  let renderedAudit = null;
   let resetFailed = false;
 
   async function getJson(url) {
@@ -127,10 +230,28 @@
     return response.json();
   }
 
+  async function post(url, body) {
+    try {
+      const response = await fetch(url, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: body === undefined ? undefined : JSON.stringify(body),
+      });
+      return response.ok;
+    } catch {
+      return false;
+    }
+  }
+
   function renderCounters(snapshots) {
     const sum = (key) => snapshots.reduce((total, snapshot) => total + snapshot.stats[key], 0);
+    // Every audit event, not just the rows the panel shows.
+    const refused = snapshots
+      .flatMap((snapshot) => snapshot.audit)
+      .filter(({ decision }) => decision === "refused" || decision === "guard_blocked");
     byId("interruptions").textContent = sum("answeredAuto");
-    byId("leaks").textContent = sum("blocked");
+    byId("refused").textContent = refused.length;
+    byId("guard").textContent = sum("blocked");
     byId("asked").textContent = sum("asked");
     byId("learned").textContent = sum("learned");
     byId("repeats").textContent = sum("repeatsServed");
@@ -143,6 +264,9 @@
     return element;
   }
 
+  const pill = (decision) => cell("span", `decision ${decision}`, DECISION_LABELS[decision] ?? decision);
+  const newestFirst = (a, b) => Date.parse(b.time) - Date.parse(a.time);
+
   function clock(iso) {
     const date = new Date(iso);
     return Number.isNaN(date.getTime()) ? iso : date.toLocaleTimeString([], { hour12: false });
@@ -153,19 +277,161 @@
     if (serialized === renderedFeed) return;
     renderedFeed = serialized;
 
-    // The contract does not fix recent()'s order, so sort here: newest first.
-    const newestFirst = [...events].sort((a, b) => Date.parse(b.time) - Date.parse(a.time));
-    timeline.replaceChildren(...newestFirst.map((event) => {
+    // The contract does not fix recent()'s order, so sort here.
+    timeline.replaceChildren(...[...events].sort(newestFirst).map((event) => {
       const row = document.createElement("li");
       row.append(
         cell("span", "time", clock(event.time)),
         cell("span", "asker", `${event.asker} → ${event.team}`),
-        cell("span", `decision ${event.decision}`, DECISION_LABELS[event.decision] ?? event.decision),
+        pill(event.decision),
         cell("span", "question", event.question),
       );
       return row;
     }));
-    byId("empty").hidden = events.length > 0;
+    byId("timeline-empty").hidden = events.length > 0;
+  }
+
+  // Tiers come from the knowledge list, but only ids reach the page's DOM, never entry text.
+  function auditRows(snapshots) {
+    const rows = snapshots.flatMap(({ profile, knowledge, audit }) => {
+      const tiers = new Map(knowledge.map((entry) => [entry.id, entry.sensitivity]));
+      const marked = (ids) => ids.map((id) => ({ id, restricted: tiers.get(id) === "restricted" }));
+      // Audit is append-only: reversed, the stable sort keeps same-millisecond events newest first.
+      return [...audit].reverse().map((event) => ({
+        ...event,
+        team: profile.displayName,
+        used: marked(event.entriesUsed),
+        withheld: marked(event.entriesWithheld),
+      }));
+    });
+    return rows.sort(newestFirst).slice(0, AUDIT_ROWS);
+  }
+
+  function entryList(entries) {
+    if (entries.length === 0) return cell("span", "none", "–");
+    const list = document.createElement("span");
+    list.className = "entries";
+    list.append(...entries.map(({ id, restricted }) =>
+      cell("span", restricted ? "entry restricted" : "entry", restricted ? `${id} restricted` : id)));
+    return list;
+  }
+
+  function tableCell(className, content) {
+    const element = document.createElement("td");
+    element.className = className;
+    element.append(content);
+    return element;
+  }
+
+  function renderAudit(snapshots) {
+    const rows = auditRows(snapshots);
+    const serialized = JSON.stringify(rows);
+    if (serialized === renderedAudit) return;
+    renderedAudit = serialized;
+
+    byId("audit").replaceChildren(...rows.map((row) => {
+      const tr = document.createElement("tr");
+      tr.append(
+        tableCell("muted", clock(row.time)),
+        tableCell("muted", row.team),
+        tableCell("muted", row.asker),
+        tableCell("question", row.question),
+        tableCell("", pill(row.decision)),
+        tableCell("", entryList(row.used)),
+        tableCell("", entryList(row.withheld)),
+        tableCell("", row.leakPrevented ? cell("span", "flag", "Prevented") : cell("span", "none", "–")),
+      );
+      return tr;
+    }));
+    byId("audit-wrap").hidden = rows.length === 0;
+    byId("audit-empty").hidden = rows.length > 0;
+  }
+
+  function field(label, control, className = "field") {
+    const wrapper = document.createElement("label");
+    wrapper.className = className;
+    wrapper.append(label, control);
+    return wrapper;
+  }
+
+  function buildCard(card, profile) {
+    const form = document.createElement("form");
+    form.className = "card";
+
+    const answer = document.createElement("textarea");
+    answer.rows = 3;
+    answer.required = true;
+
+    const save = document.createElement("input");
+    save.type = "checkbox"; // Unticked by default: nothing is saved without the owner's tick.
+    const saveLabel = document.createElement("label");
+    saveLabel.className = "check";
+    saveLabel.append(save, "Save");
+
+    const tier = document.createElement("select");
+    tier.append(...TIERS.map((name) => new Option(name, name)));
+
+    const tags = document.createElement("input");
+    tags.type = "text";
+    tags.placeholder = "comma, separated";
+
+    const send = cell("button", "", "Send");
+    send.type = "submit";
+    const note = cell("span", "card-note", "");
+    note.setAttribute("role", "status");
+
+    const meta = document.createElement("div");
+    meta.className = "card-meta";
+    meta.append(
+      cell("span", "", profile.displayName),
+      cell("span", "", `Owner: ${profile.ownerName}`),
+      cell("span", "", `Asker: ${card.asker}`),
+      cell("span", "", `Reason: ${REASON_LABELS[card.reason] ?? card.reason}`),
+    );
+
+    const row = document.createElement("div");
+    row.className = "card-controls";
+    row.append(saveLabel, field("Tier", tier), field("Tags", tags, "field grow"), send, note);
+
+    const controls = document.createElement("fieldset");
+    controls.append(field("Answer", answer), row);
+    form.append(meta, cell("p", "card-question", card.question), controls);
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const body = {
+        escalationId: card.escalationId,
+        text: answer.value,
+        save: save.checked,
+        sensitivity: tier.value,
+        tags: tags.value.split(",").map((tag) => tag.trim()).filter(Boolean),
+      };
+      controls.disabled = true;
+      note.textContent = "Sending…";
+      const sent = await post("/owner-reply", body);
+      // Sent: the next poll removes the card. Not sent: the owner's text stays for a retry.
+      controls.disabled = sent;
+      note.textContent = sent ? "Sent" : "Not sent, try again";
+    });
+    return form;
+  }
+
+  // Adds and removes cards but never rebuilds one, so polling cannot wipe a half-typed answer.
+  function renderCards(cards, snapshots) {
+    const open = new Set(cards.map((card) => card.escalationId));
+    for (const [id, element] of cardElements) {
+      if (open.has(id)) continue;
+      element.remove();
+      cardElements.delete(id);
+    }
+    for (const card of cards) {
+      if (cardElements.has(card.escalationId)) continue;
+      const { profile } = snapshots.find((snapshot) => snapshot.profile.teamId === card.team);
+      const element = buildCard(card, profile);
+      cardElements.set(card.escalationId, element);
+      byId("cards").append(element);
+    }
+    byId("cards-empty").hidden = cards.length > 0;
   }
 
   function setConnection(up) {
@@ -179,12 +445,15 @@
   // Reschedules after each poll finishes, so a slow actor cannot stack up requests.
   async function poll() {
     try {
-      const [events, ...snapshots] = await Promise.all([
+      const [events, cards, ...snapshots] = await Promise.all([
         getJson("/feed"),
+        getJson("/cards"),
         ...TEAMS.map((team) => getJson(`/snapshot/${team}`)),
       ]);
       renderCounters(snapshots);
+      renderCards(cards, snapshots);
       renderFeed(events);
+      renderAudit(snapshots);
       setConnection(true);
     } catch (error) {
       console.error(error);
@@ -196,12 +465,7 @@
   byId("reset").addEventListener("click", async (event) => {
     const button = event.currentTarget;
     button.disabled = true;
-    try {
-      const response = await fetch("/reset", { method: "POST" });
-      resetFailed = !response.ok;
-    } catch {
-      resetFailed = true;
-    }
+    resetFailed = !(await post("/reset"));
     button.disabled = false;
   });
 
