@@ -73,6 +73,9 @@ describe("expert logic", () => {
     const r1 = await X.ask(s, PRIYA, mkAsk("actuators", REGEN), drafter);
     const o = X.ownerReply(r1.state, reply(r1.result.escalation!.id, false));
     expect(o.state.knowledge).toHaveLength(5);
+    expect(o.state.stats.learned).toBe(0);
+    expect(o.state.audit.at(-1)).toMatchObject({ decision: "answered", question: REGEN });
+    expect(o.result.feed?.decision).toBe("answered");
     expect(o.result.answer?.status).toBe("answered");
   });
 

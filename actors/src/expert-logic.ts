@@ -199,6 +199,13 @@ export function ownerReply(s: ExpertState, reply: OwnerReply): { state: ExpertSt
       time: feed.time, asker: esc.asker, question: esc.question, decision: "learned",
       entriesUsed: [entry.id], entriesWithheld: [], leakPrevented: false,
     });
+  } else {
+    // Not saved: still one audit + feed event, so the owner's answer shows in the log.
+    feed = feedEvent(s, esc.asker, esc.question, "answered");
+    next = withAudit(next, {
+      time: feed.time, asker: esc.asker, question: esc.question, decision: "answered",
+      entriesUsed: [], entriesWithheld: [], leakPrevented: false,
+    });
   }
 
   // Backstop: the owner's text is guarded against the original asker's clearance too.
