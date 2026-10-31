@@ -75,7 +75,9 @@ export function setSensitivity(s: ExpertState, entryId: string, tier: Tier): Exp
   return { ...s, knowledge: s.knowledge.map((e) => (e.id === entryId ? { ...e, sensitivity: tier } : e)) };
 }
 
+/** Clearance 2 (restricted) is the owner's, in the console only (SPEC §6): no Relay agent may hold it. */
 export function setClearance(s: ExpertState, agent: string, level: Clearance): ExpertState {
+  if (level !== 0 && level !== 1) throw new Error(`clearance ${level} is not allowed for ${agent}: Relay agents get 0 or 1`);
   return { ...s, policy: { ...s.policy, clearance: { ...s.policy.clearance, [agent]: level } } };
 }
 

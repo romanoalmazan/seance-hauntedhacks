@@ -97,6 +97,7 @@ describe("expert logic", () => {
     expect(r.result.answer.status).toBe("answered");
     expect(r.result.answer.text).toContain("55 °C");
 
+    expect(() => X.setClearance(X.fromSeed(battery as SeedFile), GUEST, 2)).toThrow();
     let t = X.fromSeed(battery as SeedFile);
     t = X.setClearance(t, GUEST, 1);
     expect((await X.ask(t, GUEST, mkAsk("battery", q), drafter)).result.answer.status).toBe("answered");
