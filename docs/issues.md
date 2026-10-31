@@ -8,6 +8,8 @@ Fix: replace that command with `node scripts/relay-engine.mjs --db ./relaycast.d
 binds 127.0.0.1). Verified: lsof shows `127.0.0.1:8787`, the LAN curl is refused, beat-check 6/6, guard-check 0 leaks.
 The `pkill`/stop pattern for the engine needs to match `relay-engine.mjs` too.
 
+**Done by surfaces in d385e7e:** `scripts/demo.sh` starts the launcher and `stop` matches it. Verified: lsof shows `127.0.0.1:8787`, the LAN curl is refused, redteam 6 of 6, nothing left after stop.
+
 ## 2. CONSULT=1 (C8) must live in .env, not on the demo.sh command line
 If you turn C8 on, put `CONSULT=1` in `.env`. Beat 2½'s hand restart (`nohup bun bridge/expert-bridge.ts actuators ...`
 in demo-script.txt) doesn't inherit a command-line env var, so with `CONSULT=1 scripts/demo.sh` the consult silently stops
