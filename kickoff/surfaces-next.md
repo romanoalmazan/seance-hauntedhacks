@@ -77,3 +77,15 @@ Judging scores Execution and Demo and User Experience and Design, and the judges
 5. Empty, loading and error states have helpful microcopy.
 
 Check the page in the browser at 1280x720 for each beat in demo-script.txt and compare before and after screenshots. Run bun test: everything must pass. Commit only the files you changed, by path.
+
+## P7 · Flow strip: show the agent-to-agent traffic (optional)
+
+Start only after the P6 console work is committed. Judges score how effectively we use Agent Relay, and beat 1 of the SPEC says "the flow lights up". Build this in the console only, from the existing /feed events: no contract changes and no changes to other lanes' files.
+
+1. A compact diagram under the counters (inline SVG or HTML and CSS, no dependencies): on the left the two askers (asker-priya, asker-guest), in the center Agent Relay, on the right the two experts (expert-battery, expert-actuators), and below the Relay the owner console (Dana, Marcus). Same palette and type scale as the rest of the console.
+2. For each feed event not seen before (key it by time, asker and question), play a short sequence of about 1.5 seconds, queued if several arrive: the asker lights, then Relay, then the team's expert; then the expert, Relay and the asker. For decision `escalated`, also light expert, Relay and console, and keep the console node pulsing while the card is open. For `learned`, light console, Relay, expert, Relay and asker. For `refused` and `guard_blocked`, use the refused color on the expert node.
+3. Title the panel "Agent-to-agent traffic (last exchange)", with a one-line caption of the latest event, for example "asker-priya to expert-actuators: answered". It replays a completed exchange, so don't present it as live packet capture.
+4. It must not affect polling, the counters, the cards or the audit panel. Respect prefers-reduced-motion: no animation, color only.
+5. Write the event-to-sequence mapping as a pure function (event in, ordered edges out) with tests. Check beats 1, 2, 3 and 4 in the browser and take screenshots.
+
+Defer: expert-to-expert (C8) edges, until docs/c8-demo.md exists and the feed carries those events.
