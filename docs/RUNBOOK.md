@@ -23,13 +23,21 @@ If the console's status says `Reset, but not cleared: asker-guest` (the script s
 
 The operator's word-for-word script is `demo-script.txt`.
 
-## Three most likely failures
+## Before the first run
 
-These are the likely ones from SPEC §15. The stack already runs on its other fallbacks: local Terse dev server, local Relay engine, one laptop.
+1. **Consult.** Add the line `CONSULT=1` to `.env`. Don't put it on the command line: Bun loads `.env` for every bridge start, so only there does it survive the beat 2½ hand restart. Without it, beat 3 has no expert-to-expert consult. See `docs/c8-demo.md`.
+2. **Start.** Run `scripts/demo.sh`, then check it: `grep listening bridge-actuators.log` ends with `consults battery`. After a hand restart the log is appended to, so read the last line.
+3. **Warm up.** Run `bun scripts/warmup.ts` once. It makes one call per expert through the actor, so the first demo answer isn't the slow one, then resets the experts and the feed.
+4. **Reset.** Press **Reset** on the console, then start the demo.
 
-1. **The model makes the beats drag.** Answers take several seconds, or the expert keeps escalating (a failed model call escalates). Set a smaller, faster model in `OPENAI_MODEL` in `.env`, then run `scripts/demo.sh stop` and `scripts/demo.sh`, because the actor reads it at start. Warm it with one question before the demo, then Reset. If the model can't be fixed in time, empty `OPENAI_API_KEY` and `OPENAI_MODEL`: the offline drafter needs no network and the beats still pass.
+## Most likely failures
+
+The first three are the likely ones from SPEC §15. The stack already runs on its other fallbacks: local Terse dev server, local Relay engine, one laptop.
+
+1. **The model makes the beats drag.** Answers take several seconds, or the expert keeps escalating (a failed model call escalates). Set a smaller, faster model in `OPENAI_MODEL` in `.env`, then run `scripts/demo.sh stop` and `scripts/demo.sh`, because the actor reads it at start. Warm it with `bun scripts/warmup.ts`, then Reset. If the model can't be fixed in time, empty `OPENAI_API_KEY` and `OPENAI_MODEL`: the offline drafter needs no network and the beats still pass.
 2. **The venue Wi-Fi is bad.** Only the model call needs the network, because Relay and Terse are local here. Move the laptop to a phone hotspot. Failing that, use the offline drafter as above.
 3. **The demo drifts under pressure.** A wrong prompt, a stale screen or a beat that goes sideways. Use the fixed prompts in `demo-script.txt`, press Reset and restart the beat. If a beat still won't run, play the backup recording from 15:15.
+4. **Beat 3 shows no consult.** No "I checked with the battery expert:" paragraph, no bat-01 source. Check that `.env` has `CONSULT=1`, then restart the actuators bridge: `pkill -f "expert-bridge.ts actuators"`, then `nohup bun bridge/expert-bridge.ts actuators >> bridge-actuators.log 2>&1 &`. The last `listening` line should end with `consults battery`. Do this between runs, not mid-demo. If it's already on, the bridge only consults when the Actuators answer names Battery or the BMS, so a model rewording can skip it; the answer still goes out, and Reset and retry.
 
 ## Running the real stack
 

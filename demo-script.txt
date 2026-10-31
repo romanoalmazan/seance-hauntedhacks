@@ -8,16 +8,27 @@ Screens
   Priya           http://127.0.0.1:3001
   Guest           http://127.0.0.1:3002
 
+Pre-demo checklist, once, from the repo root
+  1. .env has the line CONSULT=1. Put it in .env, not on the command line, or the
+     beat 2½ restart brings the bridge back without it and beat 3 shows no consult.
+     If the stack was started without it: scripts/demo.sh stop
+  2. Run scripts/demo.sh
+     Check: grep listening bridge-actuators.log | tail -1
+     The line ends with "consults battery".
+  3. Run bun scripts/warmup.ts once. The first real answers are then not the slow
+     ones. It ends with "Warm. Experts and feed reset."
+  4. Open a terminal at the repo root for beat 2½.
+  5. Press Reset on the console, then start.
+
 Before every run
-  1. If it isn't running: scripts/demo.sh (from the repo root)
-  2. Open a terminal at the repo root for beat 2½.
-  3. Press Reset on the console. Both chats go empty by themselves, and the
-     counters read 0. Don't reload anything.
+  Press Reset on the console. Both chats go empty by themselves, and the counters
+  read 0. Don't reload anything.
   If the top of the console says "Reset, but not cleared", that chat's server is
   down. See docs/RUNBOOK.md.
 
-The answers' wording below is from the offline drafter. With a model configured
-the wording changes. The pills, sources, counters and hints should not.
+Real-model answers are 2 to 4 sentences of prose with [id] citations, and the
+wording varies a little between runs. Answer text below is an example. Each beat's
+check is which pill, which sources and which counters, not exact text.
 
 
 DON'T
@@ -99,11 +110,23 @@ Type, then press Enter:
 
   @actuators Does ACT-7 support regenerative braking into the pack?
 
-Should appear on Guest's page:
-  Actuators with a green "answered" pill, instantly, with Marcus's text and
-  Sources: act-L1. Nobody was asked.
+Should appear on Guest's page, in about 2 seconds:
+  Actuators with a green "answered" pill and Marcus's saved answer in the expert's
+  words. Then a second paragraph starting "I checked with the battery expert:" with
+  the pack's public limits (30 A continuous, 60 A peak for up to 10 s below 40 °C).
+  Sources: act-L1 and bat-01 Pack electrical envelope. No withheld line. No human
+  was asked.
 Should appear on the console:
-  Repeats served reads 1.
+  Repeats served reads 1. Interruptions avoided goes up by 2, from 2 to 4, instead
+  of by 1: the Battery consult counts too.
+  Timeline: a Battery row whose asker is expert-actuators (the consult), next to
+  the Actuators row for asker-guest.
+  Audit log: a Battery row with asker expert-actuators, decision partial, and
+  bat-02 under Withheld.
+Say:
+  "Marcus's answer said check with Battery, so the Actuators agent just asked the
+  Battery agent itself over Relay, at its own public clearance, and merged the
+  reply: agent to agent, no human."
 
 Then type, and press Enter:
 
