@@ -56,7 +56,7 @@ Leave `OPENAI_API_KEY` and `OPENAI_MODEL` empty to use the offline drafter, whic
 ### 1. Start the core stack
 
 ```sh
-nohup node node_modules/@relaycast/engine/dist/bin/serve.js --db ./relaycast.db --port 8787 > relay-engine.log 2>&1 &
+nohup node scripts/relay-engine.mjs --db ./relaycast.db --port 8787 > relay-engine.log 2>&1 &
 until curl -s -o /dev/null localhost:8787/health; do sleep 0.2; done
 bun scripts/setup-relay.ts
 nohup bun run actors:dev > actors-dev.log 2>&1 &
@@ -65,7 +65,7 @@ nohup bun bridge/expert-bridge.ts battery > bridge-battery.log 2>&1 &
 nohup bun bridge/expert-bridge.ts actuators > bridge-actuators.log 2>&1 &
 ```
 
-`scripts/setup-relay.ts` is safe to re-run. It reuses `.relay-tokens.json` while the tokens still work.
+`scripts/relay-engine.mjs` is the stock engine bound to 127.0.0.1, so nobody on the venue Wi-Fi can reach it. `scripts/setup-relay.ts` is safe to re-run. It reuses `.relay-tokens.json` while the tokens still work.
 
 ### 2. Check it
 
@@ -124,7 +124,7 @@ pkill -f 'console/server.ts'
 pkill -f 'expert-bridge.ts'
 pkill -f 'terse actor dev'
 pkill -f 'runActorDev'
-pkill -f 'engine/dist/bin/serve.js'
+pkill -f 'relay-engine.mjs'
 ```
 
 ### Starting over from nothing

@@ -25,6 +25,8 @@ stop_all() {
   pkill -f 'expert-bridge.ts' 2>/dev/null || true
   pkill -f 'terse actor dev' 2>/dev/null || true
   pkill -f 'runActorDev' 2>/dev/null || true
+  # An engine started by hand, by core's launcher or the older direct command.
+  pkill -f 'relay-engine.mjs|engine/dist/bin/serve.js' 2>/dev/null || true
 
   for _ in 1 2 3 4 5 6 7 8 9 10; do
     busy=""
@@ -88,7 +90,7 @@ done
 : > "$PIDS"
 
 echo "Starting the core stack..."
-start relay-engine.log node node_modules/@relaycast/engine/dist/bin/serve.js --db ./relaycast.db --port 8787
+start relay-engine.log node scripts/relay-engine.mjs --db ./relaycast.db --port 8787
 wait_for "Relay engine" relay-engine.log curl -sf localhost:8787/health
 
 bun scripts/setup-relay.ts || fail "Relay setup. If the db was wiped, remove .relay-tokens.json too."
