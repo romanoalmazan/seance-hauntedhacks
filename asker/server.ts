@@ -4,6 +4,7 @@ import { fakeConnect } from "../shared/fakes";
 import { createAsker } from "./asker-agent";
 import type { AskerIdentity } from "./asker-agent";
 import { DIRECTORY } from "./directory";
+import { eventStream } from "./events";
 
 const ASKERS: Record<string, { port: number } & AskerIdentity> = {
   "asker-priya": { agent: "asker-priya", human: "Priya Raman", team: "Controls", port: 3001 },
@@ -31,6 +32,7 @@ const server = Bun.serve({
   routes: {
     "/": () => new Response(Bun.file(`${import.meta.dir}/chat.html`)),
     "/directory": () => Response.json({ me: identity, teams: DIRECTORY }),
+    "/events": () => eventStream(asker),
     "/ask": {
       async POST(req) {
         const body = askBody.safeParse(await req.json().catch(() => null));

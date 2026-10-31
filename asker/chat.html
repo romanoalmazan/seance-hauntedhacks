@@ -64,12 +64,21 @@
   .pill.refused { color: var(--bad); }
   .pill.escalated { color: var(--wait); }
   .pill.none { color: var(--muted); }
+  .pill.owner { color: var(--accent); }
+  .waiting-note { display: flex; align-items: baseline; gap: 8px; }
+  .waiting-dot {
+    flex: none; width: 8px; height: 8px; border-radius: 50%;
+    background: var(--wait); animation: pulse 1.4s ease-in-out infinite;
+  }
+  @keyframes pulse { 50% { opacity: .25; } }
+  @media (prefers-reduced-motion: reduce) { .waiting-dot { animation: none; } }
   .sources { margin: 6px 0 0; color: var(--muted); font-size: 13px; }
   .withheld {
     margin: 8px 0 0; padding: 6px 10px; font-size: 13px;
     background: var(--raised); border-left: 2px solid var(--warn); border-radius: 4px;
   }
   .withheld ul { margin: 2px 0 0; padding-left: 18px; color: var(--muted); }
+  .withheld p { margin: 4px 0 0; }
 
   form { display: flex; gap: 8px; padding: 16px 24px; border-top: 1px solid var(--line); }
   #input {
@@ -110,6 +119,9 @@
   const log = document.getElementById("log");
   const input = document.getElementById("input");
   const teamNames = {};
+  const teamOwners = {};
+  const parts = new Map();  // requestId -> the element on screen
+  const latest = new Map(); // requestId -> newest record seen on /events
 
   // Everything from the server goes in as text, never as HTML.
   function el(tag, className, text) {
@@ -126,8 +138,9 @@
     return bubble;
   }
 
-  function renderPart({ team, answer, error }) {
+  function renderPart({ requestId, team, answer, error }) {
     const part = el("section", "part");
+    parts.set(requestId, part);
     const head = el("div", "part-head");
     head.append(el("b", "", teamNames[team] ?? team));
     part.append(head);
@@ -138,9 +151,24 @@
       return part;
     }
 
-    head.append(el("span", `pill ${answer.status}`, answer.status));
-    head.append(el("span", "confidence", `Confidence ${Math.round(answer.confidence * 100)}%`));
-    part.append(el("div", "", answer.text));
+    const fromOwner = answer.provenance === "owner";
+    const owner = answer.ownerName ?? teamOwners[team] ?? "the owner";
+    const waiting = !fromOwner && answer.status === "escalated";
+    if (fromOwner) head.append(el("span", "pill owner", `${owner}'s answer`));
+    else head.append(el("span", `pill ${answer.status}`, answer.status));
+    // A score only means something on an answer the model wrote.
+    if (!fromOwner && ["answered", "partial"].includes(answer.status)) {
+      head.append(el("span", "confidence", `Confidence ${Math.round(answer.confidence * 100)}%`));
+    }
+
+    if (waiting) {
+      const note = el("div", "waiting-note");
+      note.append(el("span", "waiting-dot"));
+      note.append(el("span", "", `Not sure. I asked ${owner}. I'll update this when they answer.`));
+      part.append(note);
+    } else {
+      part.append(el("div", "", answer.text));
+    }
 
     if (answer.sources.length > 0) {
       const sources = answer.sources.map((s) => `${s.id} ${s.title}`).join(" · ");
@@ -153,6 +181,9 @@
         for (const hint of answer.withheld.hints) hints.append(el("li", "", hint));
         withheld.append(hints);
       }
+      if (answer.withheld.canRequestAccess) {
+        withheld.append(el("p", "", `You can ask ${teamOwners[team] ?? "the owner"} for access.`));
+      }
       part.append(withheld);
     }
     return part;
@@ -162,7 +193,8 @@
     bubble.className = "bubble agent";
     bubble.textContent = "";
     if (reply.notice) bubble.append(el("p", "notice", reply.notice));
-    for (const ask of reply.asks) bubble.append(renderPart(ask));
+    // /events can beat this POST's response, so the newest record wins.
+    for (const ask of reply.asks) bubble.append(renderPart(latest.get(ask.requestId) ?? ask));
     if (reply.asks.length === 0 && reply.text !== reply.notice) bubble.append(reply.text);
     log.scrollTop = log.scrollHeight;
   }
@@ -187,8 +219,8 @@
 
   document.getElementById("form").addEventListener("submit", (event) => {
     event.preventDefault();
-    const text = input.value.trim();
-    if (!text) return;
+    const text = input.value; // untrimmed: /raw sends exactly what was typed
+    if (!text.trim()) return;
     input.value = "";
     send(text);
   });
@@ -206,6 +238,7 @@
     const list = document.getElementById("teams");
     for (const team of teams) {
       teamNames[team.teamId] = team.displayName;
+      teamOwners[team.teamId] = team.ownerName;
       const button = el("button", "team");
       button.type = "button";
       button.append(el("b", "", `@${team.teamId}`));
@@ -216,6 +249,16 @@
       list.append(item);
     }
   }
+
+  // EventSource reconnects by itself, and the server replays its store when it does.
+  new EventSource("/events").onmessage = (event) => {
+    const record = JSON.parse(event.data);
+    latest.set(record.requestId, record);
+    const part = parts.get(record.requestId);
+    if (!part) return;
+    part.replaceWith(renderPart(record));
+    log.scrollTop = log.scrollHeight;
+  };
 
   loadDirectory().catch((err) => addBubble("agent failed", `Couldn't load the directory: ${err.message}`));
 </script>
