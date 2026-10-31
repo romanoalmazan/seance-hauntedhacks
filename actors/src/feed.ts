@@ -1,6 +1,6 @@
 // Shared event timeline for the console (SPEC §9). One actor, id "main".
 import { Actor, Persisted } from "terse-sdk/actor";
-import type { FeedEvent } from "../../shared/types.js";
+import type { FeedEvent } from "./vendor/shared/types.js";
 
 const CAP = 500;
 

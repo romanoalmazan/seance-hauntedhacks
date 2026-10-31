@@ -2,11 +2,11 @@
 // Every mutation goes through a pure function and the result is reassigned field by field,
 // because a persisted array only saves on reassignment.
 import { Actor, Interleave, Persisted } from "terse-sdk/actor";
-import type { Clearance, Snapshot, Tier } from "../../shared/types.js";
-import type { Ask, OwnerReply } from "../../shared/protocol.js";
-import { draft } from "../../engine/llm.js";
-import battery from "../../seed/battery.json" with { type: "json" };
-import actuators from "../../seed/actuators.json" with { type: "json" };
+import type { Clearance, Snapshot, Tier } from "./vendor/shared/types.js";
+import type { Ask, OwnerReply } from "./vendor/shared/protocol.js";
+import { draft } from "./vendor/engine/llm.js";
+import battery from "./vendor/seed/battery.json" with { type: "json" };
+import actuators from "./vendor/seed/actuators.json" with { type: "json" };
 import * as L from "./expert-logic.js";
 
 const SEEDS: Record<string, L.SeedFile> = {

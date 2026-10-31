@@ -9,8 +9,10 @@
     "test": "bun test",
     "typecheck": "tsc --noEmit",
     "setup-relay": "bun scripts/setup-relay.ts",
-    "actors:dev": "cd actors && terse actor dev",
-    "actors:gen": "terse actor generate --out-dir actors/generated --non-interactive"
+    "actors:dev": "bun scripts/vendor-actors.ts && cd actors && terse actor dev",
+    "actors:gen": "terse actor generate --out-dir actors/generated --non-interactive",
+    "actors:vendor": "bun scripts/vendor-actors.ts",
+    "actors:deploy": "bun scripts/vendor-actors.ts && cd actors && terse deploy"
   },
   "dependencies": {
     "openai": "latest",

@@ -1,0 +1,95 @@
+{
+  "profile": {
+    "teamId": "battery",
+    "displayName": "Battery",
+    "ownerName": "Dana"
+  },
+  "knowledge": [
+    {
+      "id": "bat-01",
+      "title": "Pack electrical envelope",
+      "tags": [
+        "pack",
+        "voltage",
+        "current",
+        "peak"
+      ],
+      "sensitivity": "public",
+      "full": "Nominal 48 V. Continuous 30 A. Peak 60 A for up to 10 s while cell temperature is below 40 °C.",
+      "releasable": null,
+      "protectedTokens": [],
+      "source": "seed"
+    },
+    {
+      "id": "bat-02",
+      "title": "Thermal derating",
+      "tags": [
+        "thermal",
+        "derating",
+        "temperature",
+        "peak",
+        "bms"
+      ],
+      "sensitivity": "internal",
+      "full": "Above 40 °C cell temperature the allowed peak falls linearly from 60 A to 40 A at 55 °C. The BMS cuts off at 60 °C.",
+      "releasable": "Peak current derates when the pack is hot; details are internal.",
+      "protectedTokens": [],
+      "source": "seed"
+    },
+    {
+      "id": "bat-03",
+      "title": "Lab charging limits",
+      "tags": [
+        "charging",
+        "lab",
+        "chamber",
+        "fast-charge"
+      ],
+      "sensitivity": "internal",
+      "full": "In the lab, charge at 0.5C or lower. Fast charging only in chamber B with a second person present.",
+      "releasable": "Lab charging limits exist; details are internal.",
+      "protectedTokens": [],
+      "source": "seed"
+    },
+    {
+      "id": "bat-04",
+      "title": "Cell supplier and pricing",
+      "tags": [
+        "cells",
+        "supplier",
+        "pricing",
+        "yield",
+        "contract"
+      ],
+      "sensitivity": "restricted",
+      "full": "Cells come from supplier PELICAN at $4.15 per cell on the 2027 contract. Incoming yield is 91.3%. Ref BAT-7741.",
+      "releasable": "Cells come from a qualified external supplier; commercial terms are restricted.",
+      "protectedTokens": [
+        "PELICAN",
+        "$4.15",
+        "91.3%",
+        "BAT-7741"
+      ],
+      "source": "seed"
+    },
+    {
+      "id": "bat-05",
+      "title": "Rev C busbar weld issue",
+      "tags": [
+        "rev-c",
+        "busbar",
+        "weld",
+        "vibration",
+        "fatigue"
+      ],
+      "sensitivity": "restricted",
+      "full": "Pack rev C shows weld fatigue at module busbars above 8 g vibration. The fix ships in rev D. Ref BAT-5520.",
+      "releasable": "A vibration-related issue is under investigation; details are restricted.",
+      "protectedTokens": [
+        "8 g",
+        "BAT-5520"
+      ],
+      "source": "seed"
+    }
+  ]
+}

@@ -3,9 +3,9 @@
 // "push isn't persisted" bug. No Terse or Relay imports here.
 import type {
   AuditEvent, Clearance, Escalation, EventKind, FeedEvent, KnowledgeEntry, Policy, Snapshot, Stats, Tier,
-} from "../../shared/types.js";
-import type { Answer, Ask, OwnerReply } from "../../shared/protocol.js";
-import { clearanceOf, decide, disclose, guard, preDecide, retrieve, type Draft } from "../../engine/index.js";
+} from "./vendor/shared/types.js";
+import type { Answer, Ask, OwnerReply } from "./vendor/shared/protocol.js";
+import { clearanceOf, decide, disclose, guard, preDecide, retrieve, type Draft } from "./vendor/engine/index.js";
 
 export const AUDIT_CAP = 200;
 
