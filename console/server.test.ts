@@ -515,10 +515,10 @@ describe("POST /clearance", () => {
   ];
 
   test.each([
-    ["asker-guest", 1],
+    ["asker-robotics", 1],
     ["asker-priya", 0], // 0 is falsy, so it's the level a careless check would drop
   ])("sets %s to %d on both teams and leaves the other asker alone", async (agent, level) => {
-    const other = agent === "asker-guest" ? "asker-priya" : "asker-guest";
+    const other = agent === "asker-robotics" ? "asker-priya" : "asker-robotics";
     const before = await levels(other);
 
     expect((await change({ agent, level })).status).toBe(200);
@@ -528,14 +528,14 @@ describe("POST /clearance", () => {
   });
 
   test.each([
-    ["clearance 2, which no asker may have (SPEC §6)", { agent: "asker-guest", level: 2 }],
+    ["clearance 2, which no asker may have (SPEC §6)", { agent: "asker-robotics", level: 2 }],
     ["clearance 2 for Priya", { agent: "asker-priya", level: 2 }],
-    ["a level above 2", { agent: "asker-guest", level: 3 }],
-    ["a negative level", { agent: "asker-guest", level: -1 }],
-    ["a fractional level", { agent: "asker-guest", level: 1.5 }],
-    ["a level sent as a string", { agent: "asker-guest", level: "1" }],
-    ["a null level", { agent: "asker-guest", level: null }],
-    ["a missing level", { agent: "asker-guest" }],
+    ["a level above 2", { agent: "asker-robotics", level: 3 }],
+    ["a negative level", { agent: "asker-robotics", level: -1 }],
+    ["a fractional level", { agent: "asker-robotics", level: 1.5 }],
+    ["a level sent as a string", { agent: "asker-robotics", level: "1" }],
+    ["a null level", { agent: "asker-robotics", level: null }],
+    ["a missing level", { agent: "asker-robotics" }],
     // A valid level on purpose, so only the agent check can reject these.
     ["an unknown asker", { agent: "asker-mallory", level: 1 }],
     ["an expert's agent", { agent: "expert-battery", level: 1 }],
@@ -553,9 +553,10 @@ describe("POST /clearance", () => {
   });
 
   test("Reset puts the clearance back", async () => {
-    await change({ agent: "asker-guest", level: 1 });
+    const before = await levels("asker-robotics");
+    await change({ agent: "asker-robotics", level: 1 });
     await post("/reset");
-    expect(await levels("asker-guest")).toEqual([0, 0]);
+    expect(await levels("asker-robotics")).toEqual(before);
   });
 
   test("only POST changes a clearance", async () => {
@@ -575,13 +576,13 @@ describe("POST /clearance", () => {
         reset: () => fakes.expert(team).reset(),
       }),
     });
-    expect((await change({ agent: "asker-guest", level: 1 })).status).toBe(500);
+    expect((await change({ agent: "asker-robotics", level: 1 })).status).toBe(500);
   });
 });
 
 test("the page has the clearance and tier sections", async () => {
   const page = await (await get("/")).text();
-  expect(page).toContain("Asker clearance, both teams");
+  expect(page).toContain("Which teams can ask the Software agent?");
   expect(page).toContain("Knowledge tiers");
   expect(page).toContain("1, internal");
   expect(page).not.toContain("2, restricted"); // SPEC §6: the control offers no clearance 2

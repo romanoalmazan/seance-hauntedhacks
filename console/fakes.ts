@@ -2,6 +2,7 @@
 // (expert, feed), so the real wrappers replace these without touching the server.
 import batterySeed from "../seed/battery.json";
 import actuatorsSeed from "../seed/actuators.json";
+import softwareSeed from "../seed/software.json";
 import { encode, parseMessage, PROTOCOL_VERSION } from "../shared/protocol";
 import type { Message, OwnerReply, RelayClient } from "../shared/protocol";
 import type {
@@ -23,7 +24,7 @@ interface Seed {
   knowledge: KnowledgeEntry[];
 }
 
-const SEEDS = { battery: batterySeed, actuators: actuatorsSeed } as Record<TeamId, Seed>;
+const SEEDS = { battery: batterySeed, actuators: actuatorsSeed, software: softwareSeed } as Record<TeamId, Seed>;
 
 const FEED_LIMIT_DEFAULT = 50;
 const AUDIT_LIMIT = 200; // SPEC §9
@@ -265,6 +266,7 @@ export function createFakes() {
   const experts: Record<TeamId, FakeExpert> = {
     battery: new FakeExpert("battery"),
     actuators: new FakeExpert("actuators"),
+    software: new FakeExpert("software"),
   };
   const timeline = new FakeFeed();
   const relay = new FakeRelay((to, reply) => {

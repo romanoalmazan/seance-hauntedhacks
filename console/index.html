@@ -304,6 +304,15 @@
     .control-row .entry { grid-column: 1 / -1; }
     ol#timeline li { grid-template-columns: 1fr; gap: 4px; }
   }
+  .teach { border: 1px solid var(--line); border-radius: 10px; padding: 12px 16px 16px; margin-block: 16px; }
+  .teach h2 { margin-top: 4px; }
+  .teach-field { display: grid; gap: 4px; margin-block: 8px; font-weight: 600; }
+  .teach-field input, .teach-field textarea { font: inherit; font-weight: 400; padding: 8px; border: 1px solid var(--line); border-radius: 6px; width: 100%; box-sizing: border-box; background: transparent; color: inherit; }
+  .teach-actions { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  .teach-access { border: 0; padding: 0; margin-top: 12px; display: flex; gap: 24px; flex-wrap: wrap; font-size: 1.05em; }
+  .teach-access legend { font-weight: 600; margin-bottom: 6px; }
+  .teach-access label { display: flex; gap: 8px; align-items: center; cursor: pointer; }
+  .teach-access input { width: 20px; height: 20px; }
 </style>
 </head>
 <body>
@@ -319,7 +328,7 @@
     <button id="reset" type="button">Reset</button>
   </header>
 
-  <section class="counters" aria-label="Counters, both teams combined">
+  <section class="counters" aria-label="Counters">
     <div class="tile hero"><div class="label">Interruptions avoided</div><div class="value" id="interruptions">–</div></div>
     <div class="tile hero"><div class="label">Requests refused</div><div class="value" id="refused">–</div></div>
     <div class="tile hero">
@@ -345,18 +354,38 @@
     <div class="flow-map">
       <svg viewBox="0 0 1200 116" role="img" aria-label="Askers on the left and experts on the right, connected through Agent Relay in the center, with the owner console below Relay.">
         <path class="flow-spoke" data-spoke="asker-priya" d="M190 18C340 18 360 40 505 40"/>
-        <path class="flow-spoke" data-spoke="asker-guest" d="M190 62C340 62 360 40 505 40"/>
-        <path class="flow-spoke" data-spoke="expert-battery" d="M1010 18C860 18 840 40 695 40"/>
-        <path class="flow-spoke" data-spoke="expert-actuators" d="M1010 62C860 62 840 40 695 40"/>
+        <path class="flow-spoke" data-spoke="asker-robotics" d="M190 62C340 62 360 40 505 40"/>
+        <path class="flow-spoke" data-spoke="expert-software" d="M1010 18C860 18 840 40 695 40"/>
+        <path class="flow-spoke" data-spoke="expert-battery" d="M1010 62C860 62 840 40 695 40"/>
         <path class="flow-spoke" data-spoke="console" d="M600 80V58"/>
         <g class="flow-node" data-node="asker-priya"><rect x="1" y="1" width="189" height="34" rx="8"/><text x="95" y="18">asker-priya</text></g>
-        <g class="flow-node" data-node="asker-guest"><rect x="1" y="45" width="189" height="34" rx="8"/><text x="95" y="62">asker-guest</text></g>
+        <g class="flow-node" data-node="asker-robotics"><rect x="1" y="45" width="189" height="34" rx="8"/><text x="95" y="62">asker-robotics</text></g>
         <g class="flow-node" data-node="relay"><rect x="505" y="22" width="190" height="36" rx="8"/><text x="600" y="40">Agent Relay</text></g>
-        <g class="flow-node" data-node="expert-battery"><rect x="1010" y="1" width="189" height="34" rx="8"/><text x="1105" y="18">expert-battery</text></g>
-        <g class="flow-node" data-node="expert-actuators"><rect x="1010" y="45" width="189" height="34" rx="8"/><text x="1105" y="62">expert-actuators</text></g>
-        <g class="flow-node" data-node="console"><rect x="470" y="80" width="260" height="34" rx="8"/><text x="600" y="97">console (Dana, Marcus)</text></g>
+        <g class="flow-node" data-node="expert-software"><rect x="1010" y="1" width="189" height="34" rx="8"/><text x="1105" y="18">expert-software</text></g>
+        <g class="flow-node" data-node="expert-battery"><rect x="1010" y="45" width="189" height="34" rx="8"/><text x="1105" y="62">expert-battery</text></g>
+        <g class="flow-node" data-node="console"><rect x="470" y="80" width="260" height="34" rx="8"/><text x="600" y="97">console (Sam)</text></g>
       </svg>
     </div>
+  </section>
+
+  <section class="teach" aria-labelledby="teach-title">
+    <h2 id="teach-title">Teach your agent <small>Software, owner Sam</small></h2>
+    <p class="hint">Write it once. Your agent answers everyone you allow, so they never have to ask you.</p>
+    <label class="teach-field">What is it?
+      <input id="teach-title-input" type="text" value="X database ingest format" maxlength="120">
+    </label>
+    <label class="teach-field">The details
+      <textarea id="teach-text" rows="4" maxlength="2000">Send JSON to the X database /ingest endpoint. Each record: device_id (string), ts (ISO-8601, UTC), metric (string), value (number), unit (SI unit string). Batch up to 500 records per POST; gzip bodies over 1 MB.</textarea>
+    </label>
+    <div class="teach-actions">
+      <button id="teach-send" type="button">Teach agent</button>
+      <span id="teach-status" role="status"></span>
+    </div>
+    <fieldset class="teach-access">
+      <legend>Which teams can ask the Software agent?</legend>
+      <label><input type="checkbox" id="access-controls" data-group="controls"> Controls</label>
+      <label><input type="checkbox" id="access-robotics" data-group="robotics"> Robotics</label>
+    </fieldset>
   </section>
 
   <h2>Escalations</h2>
@@ -367,7 +396,7 @@
   <ol id="timeline"></ol>
   <p id="timeline-empty" class="empty" hidden>No questions yet. Questions from the chat pages appear here as they arrive.</p>
 
-  <h2>Audit log <small>newest 20 across both teams</small></h2>
+  <h2>Audit log <small>newest 20</small></h2>
   <div class="table-wrap" id="audit-wrap" hidden>
     <table>
       <thead>
@@ -387,19 +416,20 @@
   </div>
   <p id="audit-empty" class="empty">No audit events yet. Every answer and refusal is recorded here.</p>
 
-  <h2>Asker clearance, both teams</h2>
-  <div class="access" id="clearance"></div>
+  <div class="access" id="clearance" hidden></div>
 
   <h2>Knowledge tiers</h2>
   <p class="hint">A change applies at once. There is no Save.</p>
   <div class="access" id="knowledge"></div>
 
 <script>
-  const TEAMS = ["battery", "actuators"];
+  const TEAMS = ["software"];
+  const ACCESS_GROUPS = { controls: "asker-priya", robotics: "asker-robotics" };
+  let accessWrites = 0;
   const POLL_MS = 1000;
   const AUDIT_ROWS = 20;
   const TIERS = ["public", "internal", "restricted"];
-  const ASKERS = { "asker-priya": "Priya Raman", "asker-guest": "Guest" };
+  const ASKERS = { "asker-priya": "Priya Raman, Controls", "asker-robotics": "Alex Chen, Robotics" };
   const DECISION_LABELS = {
     answered: "Answered",
     partial: "Partial",
@@ -733,6 +763,55 @@
       cell("li", "", `${result.prompt} (${failureReason(result)})`)));
   }
 
+  // Team boxes mirror the Software expert's policy: a team is allowed when its asker has clearance >= 1.
+  function renderAccess(snapshots) {
+    if (accessWrites > 0) return;
+    const software = snapshots.find(({ profile }) => profile.teamId === "software");
+    if (!software) return;
+    for (const [group, agent] of Object.entries(ACCESS_GROUPS)) {
+      const level = software.policy.clearance[agent] ?? software.policy.defaultClearance;
+      byId(`access-${group}`).checked = level >= 1;
+    }
+  }
+
+  for (const box of document.querySelectorAll(".teach-access input")) {
+    box.addEventListener("change", async () => {
+      accessWrites++;
+      try {
+        const res = await fetch("/team-access", {
+          method: "POST",
+          body: JSON.stringify({ team: "software", group: box.dataset.group, allowed: box.checked }),
+        });
+        if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error ?? res.status);
+      } catch (err) {
+        box.checked = !box.checked;
+        byId("teach-status").textContent = `Couldn't change access: ${err.message}`;
+      } finally {
+        accessWrites--;
+      }
+    });
+  }
+
+  byId("teach-send").addEventListener("click", async () => {
+    const button = byId("teach-send");
+    const status = byId("teach-status");
+    button.disabled = true;
+    status.textContent = "Teaching…";
+    try {
+      const res = await fetch("/teach", {
+        method: "POST",
+        body: JSON.stringify({ team: "software", title: byId("teach-title-input").value, text: byId("teach-text").value }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body.error ?? res.status);
+      status.textContent = `Saved as ${body.id}. Tick the teams that may ask.`;
+    } catch (err) {
+      status.textContent = `Couldn't teach: ${err.message}`;
+    } finally {
+      button.disabled = false;
+    }
+  });
+
   function setConnection(up) {
     const status = byId("status");
     document.body.classList.toggle("stale", !up);
@@ -758,6 +837,7 @@
         renderClearance(snapshots);
         renderKnowledge(snapshots);
       }
+      renderAccess(snapshots);
       setConnection(true);
       // An event, not a call: a fault in the strip can't reach this poll.
       document.dispatchEvent(new CustomEvent("console:polled", { detail: { events, cards } }));

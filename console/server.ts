@@ -15,7 +15,9 @@ const FEED_LIMIT = 100;
 // Must outlast POST /redteam, or Bun drops it mid-run (default 10 s): six asks at the asker's 30 s
 // timeout each.
 const IDLE_TIMEOUT_SECONDS = 190;
-const ASKER_URLS = { "asker-priya": "http://127.0.0.1:3001", "asker-guest": "http://127.0.0.1:3002" };
+const ASKER_URLS = { "asker-priya": "http://127.0.0.1:3001", "asker-robotics": "http://127.0.0.1:3002" };
+// The team boxes on a taught entry: which Relay askers belong to which team.
+export const GROUPS = { controls: ["asker-priya"], robotics: ["asker-robotics"] } as const;
 const ASKER_RESET_TIMEOUT_MS = 2000;
 
 export interface ConsoleDeps {
@@ -29,11 +31,13 @@ export interface ConsoleDeps {
   askGuest?(text: string): Promise<string>;
   /** Clears both chat pages and returns the askers it missed. Defaults to their POST /reset. */
   resetAskers?(): Promise<string[]>;
+  /** "Teach your agent": the owner documents an entry. Real actors only. */
+  teach?(team: TeamId, input: { title: string; text: string }): Promise<string>;
 }
 
 const devEventSchema = z.object({
   time: z.string().datetime().optional(),
-  team: z.enum(["battery", "actuators"]),
+  team: z.enum(["battery", "actuators", "software"]),
   asker: z.string().min(1),
   question: z.string().min(1),
   decision: z.enum(["answered", "partial", "refused", "escalated", "guard_blocked", "learned"]),
@@ -50,8 +54,20 @@ const sensitivityInput = z.object({
 });
 
 const clearanceInput = z.object({
-  agent: z.enum(["asker-priya", "asker-guest"]),
+  agent: z.enum(["asker-priya", "asker-robotics"]),
   level: z.union([z.literal(0), z.literal(1)]), // SPEC §6: no asker has clearance 2
+});
+
+const teachInput = z.object({
+  team: askSchema.shape.to,
+  title: z.string().trim().min(3).max(120),
+  text: z.string().trim().min(3).max(2000),
+});
+
+const teamAccessInput = z.object({
+  team: askSchema.shape.to,
+  group: z.enum(["controls", "robotics"]),
+  allowed: z.boolean(),
 });
 
 const json = (body: unknown, status = 200) => Response.json(body, { status });
@@ -120,6 +136,23 @@ export function handler(deps: ConsoleDeps) {
     return json({ ok: true });
   }
 
+  async function teach(req: Request): Promise<Response> {
+    const parsed = teachInput.safeParse(await req.json().catch(() => null));
+    if (!parsed.success) return json({ error: "give it a title and the format text" }, 400);
+    if (!deps.teach) return json({ error: "teaching needs the real actors (REAL=1)" }, 501);
+    const { team, title, text } = parsed.data;
+    return json({ ok: true, id: await deps.teach(team, { title, text }) });
+  }
+
+  /** A team box: every asker in that team gets clearance 1 (ticked) or 0 on this expert only. */
+  async function setTeamAccess(req: Request): Promise<Response> {
+    const parsed = teamAccessInput.safeParse(await req.json().catch(() => null));
+    if (!parsed.success) return json({ error: "invalid team access" }, 400);
+    const { team, group, allowed } = parsed.data;
+    await Promise.all(GROUPS[group].map((agent) => deps.expert(team).setClearance(agent, allowed ? 1 : 0)));
+    return json({ ok: true });
+  }
+
   async function route(req: Request): Promise<Response> {
     const { pathname } = new URL(req.url);
 
@@ -153,6 +186,8 @@ export function handler(deps: ConsoleDeps) {
           }),
         );
       }
+      if (pathname === "/teach") return teach(req);
+      if (pathname === "/team-access") return setTeamAccess(req);
       if (pathname === "/dev/event" && deps.dev) return devEvent(req, deps.dev);
       if (pathname === "/dev/escalate" && deps.dev) {
         return json({ ok: true, escalationId: await deps.dev.escalate() });
@@ -175,8 +210,8 @@ export function handler(deps: ConsoleDeps) {
 /** No `dev` here, so the /dev routes don't exist against the real stack. */
 async function realDeps(): Promise<ConsoleDeps> {
   const { connect } = await import("../shared/relay");
-  const { expert, feed } = await import("../shared/actors");
-  return { expert, feed, relay: await connect("console") };
+  const { expert, feed, ownerTools } = await import("../shared/actors");
+  return { expert, feed, relay: await connect("console"), teach: (team, input) => ownerTools(team).teach(input) };
 }
 
 if (import.meta.main) {

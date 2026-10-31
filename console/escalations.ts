@@ -21,7 +21,7 @@ export const ownerReplyInput = ownerReplySchema
 export type OwnerReplyInput = z.infer<typeof ownerReplyInput>;
 export type ReplyResult = "sent" | "gone" | "busy";
 
-export const TEAMS: readonly TeamId[] = ["battery", "actuators"];
+export const TEAMS: readonly TeamId[] = ["software", "battery", "actuators"];
 
 const expertAgent = (team: TeamId) => `expert-${team}`;
 
