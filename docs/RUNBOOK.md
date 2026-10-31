@@ -51,7 +51,7 @@ bun install
 ln -sf ../.env actors/.env
 ```
 
-Leave `OPENAI_API_KEY` and `OPENAI_MODEL` empty to use the offline drafter, which quotes the visible entries (so answers carry `[act-01]`-style tags and read like a list). To use a model, fill both in `.env` and restart the Terse dev server, because the actor is what reads them. The model path has not been run on the real stack yet.
+Leave `OPENAI_API_KEY` and `OPENAI_MODEL` empty to use the offline drafter, which quotes the visible entries (so answers carry `[act-01]`-style tags and read like a list). To use a model, fill both in `.env` and restart the Terse dev server, because the actor is what reads them. The model path (gpt-4.1-mini) has been run on the core lane's machine: beat 1 and beat 3 answers came back in 28 to 63 words, about a second each, cited with [id]. Run it once on the demo laptop before rehearsing.
 
 ### 1. Start the core stack
 
