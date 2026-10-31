@@ -26,3 +26,20 @@ with inline [id] citations (e.g. "... below 40 °C [bat-01]."). Pills, sources, 
 ## 5. Before every run: scripts/warmup.ts
 Order: `scripts/demo.sh`, then `bun scripts/warmup.ts` (one model call per expert, ~1 s each, then resets experts+feed),
 then press Reset on the console. Worth a line in demo-script.txt "Before every run" and the RUNBOOK.
+
+## 6. Pre-demo checklist: scripts/preflight.ts (new, ~13:45)
+Order before going on stage: `scripts/demo.sh`, `bun scripts/warmup.ts`, press Reset, then `bun scripts/preflight.ts`.
+It prints green/red per line and exits 1 on any red: five ports on 127.0.0.1, both bridges listening (and
+"consults battery" when CONSULT=1), OpenAI key/model set and a real call < 3 s, experts and feed empty, .env mode.
+Please add it to docs/RUNBOOK.md and the "Before every run" list in demo-script.txt. Verified all green on main and on a
+fresh clone.
+
+## 7. RUNBOOK "Once per machine": chmod 600 .env
+`cp .env.example .env` creates a world-readable file (mode 644) holding the OpenAI and Terse keys. Add `chmod 600 .env`
+after it. preflight.ts flags it red until then.
+
+## 8. Behavior changes you may see (no action needed)
+- A model failure (timeout ~6 s, network, bad JSON) no longer escalates: one retry, then the deterministic drafter
+  answers from the visible entries. No owner card mid-beat if the Wi-Fi hiccups; the answer just reads like a quote list.
+- Answers are repeatable (temperature 0, seed 7): same sources every run, wording varies by a few words.
+- The consult also fires when the cited entry (act-L1) says "check with Battery", even if the model's wording doesn't.
