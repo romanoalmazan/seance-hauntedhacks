@@ -10,7 +10,7 @@ cd "$(dirname "$0")/.."
 export PATH="$HOME/.bun/bin:$PATH"
 
 PIDS=/tmp/liaison-demo.pids
-PORTS="8787 7100 3000 3001 3002"
+PORTS="8787 7100 3000 3001 3002 3003"
 WAIT_SECONDS=30
 
 listening() { lsof -nP -iTCP:"$1" -sTCP:LISTEN >/dev/null 2>&1; }
@@ -109,15 +109,17 @@ echo "Starting the surfaces..."
 export REAL=1
 start asker-priya.log bun asker/server.ts asker-priya
 start asker-robotics.log bun asker/server.ts asker-robotics
+start asker-sam.log bun asker/server.ts asker-sam
 start console.log bun console/server.ts
 wait_for "Priya asker" asker-priya.log curl -s -o /dev/null 127.0.0.1:3001
 wait_for "Robotics asker" asker-robotics.log curl -s -o /dev/null 127.0.0.1:3002
+wait_for "Sam asker" asker-sam.log curl -s -o /dev/null 127.0.0.1:3003
 wait_for "console" console.log curl -s -o /dev/null 127.0.0.1:3000
 
 cat <<URLS
 
 Up, on the real stack:
-  Sam's agent    http://127.0.0.1:3000/sam
+  Sam, Software  http://127.0.0.1:3003
   Owner console  http://127.0.0.1:3000
   Priya          http://127.0.0.1:3001
   Alex, Robotics http://127.0.0.1:3002

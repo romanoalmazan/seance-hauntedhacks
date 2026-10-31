@@ -151,6 +151,16 @@
     #log { padding: 16px; }
     form { padding: 12px 16px; }
   }
+  .share { margin-left: 4px; padding: 6px 12px; border-radius: 8px; border: 1px solid var(--accent); background: transparent; color: var(--accent); font: inherit; font-size: var(--text-sm); font-weight: 700; cursor: pointer; white-space: nowrap; }
+  .share:hover { background: var(--accent); color: var(--on-fill); }
+  .pop { position: fixed; inset: 0; display: grid; place-items: center; background: rgb(0 0 0 / .55); z-index: 10; padding: 16px; }
+  .pop[hidden] { display: none; }
+  .pop-card { width: min(440px, 100%); background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 20px 22px; display: grid; gap: 12px; }
+  .pop-card h2 { margin: 0; font-size: var(--text-lg); }
+  .pop-card label { display: flex; gap: 10px; align-items: center; font-weight: 700; cursor: pointer; }
+  .pop-card input { width: 20px; height: 20px; accent-color: var(--accent); }
+  .pop-note { margin: 0; color: var(--muted); font-size: var(--text-sm); }
+  .pop-card button { justify-self: end; padding: 8px 18px; border-radius: 8px; border: 0; background: var(--accent); color: var(--on-fill); font: inherit; font-weight: 700; cursor: pointer; }
 </style>
 </head>
 <body>
@@ -159,9 +169,20 @@
   <span class="org">Acme Robotics</span>
   <div class="view">
     <strong id="view">Chat</strong>
+    <button id="share" class="share" type="button" hidden>Share agent context</button>
     <p id="me"></p>
   </div>
 </header>
+<div id="share-pop" class="pop" role="dialog" aria-modal="true" aria-labelledby="share-title" hidden>
+  <div class="pop-card">
+    <h2 id="share-title">Share agent context</h2>
+    <p class="pop-note">Who can ask your agent? Ticking applies at once. Teams you leave out are told it exists, never what it says.</p>
+    <label><input type="checkbox" data-group="controls"> Controls team</label>
+    <label><input type="checkbox" data-group="robotics"> Robotics company</label>
+    <p id="share-status" class="pop-note" role="status"></p>
+    <button id="share-close" type="button">Done</button>
+  </div>
+</div>
 <aside>
   <h2>Team directory</h2>
   <ul id="teams"></ul>
@@ -304,10 +325,51 @@
     input.focus();
   }
 
+  // Pre-filled for the demo on the page of someone who runs a team expert (Sam).
+  const OWNER_PREFILL = "X database ingest format: Send JSON to the X database /ingest endpoint. Each record: device_id (string), ts (ISO-8601, UTC), metric (string), value (number), unit (SI unit string). Batch up to 500 records per POST; gzip bodies over 1 MB.";
+  let isOwner = false;
+
+  const pop = document.getElementById("share-pop");
+  const shareStatus = document.getElementById("share-status");
+  async function openShare() {
+    shareStatus.textContent = "";
+    pop.hidden = false;
+    try {
+      const state = await (await fetch("/share")).json();
+      for (const box of pop.querySelectorAll("input")) box.checked = !!state[box.dataset.group];
+    } catch (err) {
+      shareStatus.textContent = `Couldn't load: ${err.message}`;
+    }
+  }
+  for (const box of pop.querySelectorAll("input")) {
+    box.addEventListener("change", async () => {
+      try {
+        const res = await fetch("/share", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ group: box.dataset.group, allowed: box.checked }) });
+        if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error ?? res.status);
+        shareStatus.textContent = box.checked ? `${box.parentElement.textContent.trim()} can now ask your agent.` : `${box.parentElement.textContent.trim()} can no longer ask your agent.`;
+      } catch (err) {
+        box.checked = !box.checked;
+        shareStatus.textContent = `Couldn't change access: ${err.message}`;
+      }
+    });
+  }
+  document.getElementById("share").addEventListener("click", openShare);
+  document.getElementById("share-close").addEventListener("click", () => { pop.hidden = true; input.focus(); });
+  pop.addEventListener("click", (event) => { if (event.target === pop) pop.hidden = true; });
+
   async function loadDirectory() {
     const { me, teams } = await (await fetch("/directory")).json();
+    if (me.owns) {
+      isOwner = true;
+      document.getElementById("share").hidden = false;
+      input.value = OWNER_PREFILL;
+      input.placeholder = "Tell your agent something, or ask a team with @";
+      const empty = document.getElementById("empty");
+      empty.querySelector("h2").textContent = "Tell your agent, or ask a team";
+      empty.querySelector("p").textContent = "Without an @team, you're telling your own agent something it should know. With @team, your agent asks that team's agent for you.";
+    }
     document.getElementById("me").textContent = `${me.human} · ${me.team}`;
-    const view = `${me.human.split(" ")[0]}'s chat`;
+    const view = `${me.human.split(" ")[0]}'s ${me.owns ? "agent" : "chat"}`;
     document.getElementById("view").textContent = view;
     document.title = `Séance · ${view}`;
     const list = document.getElementById("teams");
@@ -341,7 +403,8 @@
     log.replaceChildren();
     parts.clear();
     latest.clear();
-    input.value = "";
+    input.value = isOwner ? OWNER_PREFILL : "";
+    pop.hidden = true;
   });
 
   loadDirectory().catch((err) => {

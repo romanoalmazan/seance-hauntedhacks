@@ -1,10 +1,11 @@
 SÉANCE DEMO SCRIPT  (Software story)
-About three minutes. Four screens: Sam's agent (Software owner), Priya's chat
-(Controls), Alex's chat (Robotics) and the owner console. Everyone is inside Acme Robotics. Type exactly
+About three minutes. Four screens: Sam's chat (Software), Priya's chat (Controls),
+Alex's chat (Robotics) and the owner console. Every person has the same kind of chat
+and their own agent; there is no hierarchy. Sam's agent also holds what he teaches it. Everyone is inside Acme Robotics. Type exactly
 what is written here. Don't improvise.
 
 Screens
-  Sam's agent        http://127.0.0.1:3000/sam   (Sam, owner of the Software agent)
+  Sam, Software      http://127.0.0.1:3003       (Sam's agent; "Share agent context" button)
   Owner console      http://127.0.0.1:3000       (counters, timeline, audit log)
   Priya, Controls    http://127.0.0.1:3001
   Alex, Robotics     http://127.0.0.1:3002
@@ -12,30 +13,31 @@ Screens
 Before every run
   1. scripts/demo.sh stop && scripts/demo.sh        (from the repo root)
   2. bun scripts/warmup.ts
-  3. Press Reset on the console. All three chats go back to empty (Sam's to the greeting,
-     with the format pre-filled again), counters 0.
+  3. Press Reset on the console. All three chats empty (Sam's box pre-filled with the
+     format again), counters 0, both teams unshared.
   4. bun scripts/preflight.ts                        every line must say ok
 
 DON'T
   - Don't refresh a chat page. Its answers are only on the page.
-  - Don't ask @software anything before Sam clicks Teach agent (it would page Sam).
+  - Don't ask @software anything before Sam sends the format (it would page Sam).
   - Don't restart anything during the demo.
 
 
 BEAT 1 · Sam tells his agent the format once      ("Ask the agent, not the engineer.")
-Page: Sam's agent (http://127.0.0.1:3000/sam). The box is pre-filled:
+Page: Sam (http://127.0.0.1:3003). The message box is pre-filled:
 
   X database ingest format: Send JSON to the X database /ingest endpoint. Each record:
   device_id (string), ts (ISO-8601, UTC), metric (string), value (number), unit
   (SI unit string). Batch up to 500 records per POST; gzip bodies over 1 MB.
 
-Click Tell agent.
-Should appear on Sam's page: his message, then his agent: "Got it. I saved
-"X database ingest format" as sof-T1. Which teams may ask me about it?" with two
-checkboxes, Controls and Robotics. Tick Controls only.
+Press Enter (no @team: Sam is telling his own agent).
+Should appear on Sam's page: his message, then "Got it. I saved "X database ingest
+format" as sof-T1. Use Share agent context to choose which teams can ask me about it."
+Click "Share agent context" (top right, beside "Sam's agent"). In the pop-up tick
+Controls team only ("Controls team can now ask your agent."), then click Done.
 Should appear on the console: Learned 1.
-Say: Sam tells his agent once and decides which teams may ask. It lives in the
-Software team's Durable Actor, not in a shared bot.
+Say: Sam tells his agent once and shares it with the teams he chooses. It lives in
+the Software team's Durable Actor, not in a shared bot.
 
 
 BEAT 2 · Controls gets the answer without bothering Sam
@@ -70,7 +72,7 @@ anything. Robotics never got the text, not even into the prompt.
 
 
 BEAT 4 · Sam opens it to Robotics, live
-Page: Sam's agent. Tick Robotics in his agent's reply. (It applies at once.)
+Page: Sam. Click "Share agent context", tick Robotics company, click Done.
 Page: Alex. Type the same question again, then press Enter:
 
   @software What format should data be in to send it to the X database?
@@ -80,6 +82,8 @@ Should appear on Alex's page:
 Should appear on the console:
   Interruptions avoided 2. Repeats served 2.
 Proves: the owner controls who can ask, per team, and it takes effect instantly.
+Optional: on Sam's page type "@battery What current can the pack deliver?" Sam's agent
+asks Battery's agent like anyone's would and gets the public answer at his access level.
 
 
 CLOSE · the audit log

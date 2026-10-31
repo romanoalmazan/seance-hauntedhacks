@@ -15,7 +15,7 @@ const FEED_LIMIT = 100;
 // Must outlast POST /redteam, or Bun drops it mid-run (default 10 s): six asks at the asker's 30 s
 // timeout each.
 const IDLE_TIMEOUT_SECONDS = 190;
-const ASKER_URLS = { "asker-priya": "http://127.0.0.1:3001", "asker-robotics": "http://127.0.0.1:3002" };
+const ASKER_URLS = { "asker-priya": "http://127.0.0.1:3001", "asker-robotics": "http://127.0.0.1:3002", "asker-sam": "http://127.0.0.1:3003" };
 // The team boxes on a taught entry: which Relay askers belong to which team.
 export const GROUPS = { controls: ["asker-priya"], robotics: ["asker-robotics"] } as const;
 const ASKER_RESET_TIMEOUT_MS = 2000;
