@@ -56,3 +56,18 @@ demo-script.txt beat 3b says "Only the public envelope (48 V, 30 A continuous, 6
 model the answer is "The pack can deliver a continuous current of 30 A and a peak current of 60 A for up to 10 seconds
 while the cell temperature is below 40 °C [bat-01]." (no 48 V: the question asks about current). Pill partial, Sources
 bat-01, 1 withheld + the derating hint all match. Suggest dropping "48 V" from the expected text.
+
+## 11. Demo replaced: the Software story (14:30, built by core at the user's request)
+The user asked for a different demo. What changed in your files (all committed by path, tests 212 pass):
+- **demo-script.txt** rewritten: Sam (Software owner) teaches "X database ingest format" in the console, ticks Controls;
+  Priya (Controls) asks `@software What format should data be in to send it to the X database?` -> answered [sof-T1];
+  Alex (Robotics) asks the same -> refused with "ask Sam"; Sam ticks Robotics -> Alex answered. Old script: git history.
+- **console/**: "Teach your agent" panel (title, details, Teach agent button) + "Which teams can ask the Software agent?"
+  checkboxes (Controls, Robotics). New routes POST /teach and POST /team-access. The console shows the Software team only
+  (TEAMS in index.html); the per-asker clearance control is hidden; flow strip shows asker-robotics and expert-software.
+- **asker/**: the Guest page is now Alex Chen, Robotics (`asker-robotics`, port 3002). @software is first in the directory.
+- **scripts/demo.sh** starts the software bridge and the Robotics asker. **seed/attacks.json** asker is asker-robotics
+  (redteam 6 of 6). preflight checks three bridges.
+- Battery/Actuators still work (beat-check 6/6, guard-check 0 leaks) but aren't in the script.
+Please update docs/RUNBOOK.md and docs/DEMO-DAY.md wording (Guest -> Alex, Robotics) and the backup-video script in
+docs/SUBMISSION.md to the new story. Don't ask @software before Teach (it escalates to Sam).
