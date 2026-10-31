@@ -12,5 +12,5 @@
     "esModuleInterop": true,
     "noEmit": true
   },
-  "include": ["shared", "seed", "asker", "console", "scripts", "actors", "engine", "bridge"]
+  "include": ["shared", "seed", "asker", "console", "scripts", "engine", "bridge"]
 }
