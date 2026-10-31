@@ -37,16 +37,49 @@ export function useFake(env: Env = processEnv()): boolean {
   return env.LLM_FAKE === "1" || !env.OPENAI_API_KEY || !env.OPENAI_MODEL;
 }
 
+export interface DraftOptions {
+  timeoutMs?: number; // per attempt
+  retries?: number; // extra attempts after the first
+  fetcher?: typeof fetch; // injectable for tests
+  warn?: (msg: string) => void;
+}
+
+/**
+ * Real model draft. A model FAILURE (network error, timeout, non-2xx, invalid JSON or shape) is retried
+ * once, then falls back to the deterministic drafter with a warning. It never escalates: only a model
+ * that answered and said needsOwner (or low confidence) pages the owner. The fallback quotes visible
+ * entries only, so the clearance rules are unchanged.
+ */
 export async function draft(
   question: string,
   context: string | undefined,
   visible: KnowledgeEntry[],
   env: Env = processEnv(),
   team?: string,
+  opts: DraftOptions = {},
 ): Promise<Draft> {
   if (useFake(env)) return fakeDraft(visible);
-  const res = await fetch("https://api.openai.com/v1/chat/completions", {
+  const { timeoutMs = 6000, retries = 1, fetcher = fetch, warn = (m: string) => console.warn(m) } = opts;
+  let lastError = "";
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      return await callModel(question, context, visible, env, team, timeoutMs, fetcher);
+    } catch (err) {
+      lastError = (err as Error).message;
+      warn(`[llm] attempt ${attempt + 1} failed: ${lastError}`);
+    }
+  }
+  warn(`[llm] model unavailable (${lastError}); using the deterministic drafter`);
+  return fakeDraft(visible);
+}
+
+async function callModel(
+  question: string, context: string | undefined, visible: KnowledgeEntry[], env: Env, team: string | undefined,
+  timeoutMs: number, fetcher: typeof fetch,
+): Promise<Draft> {
+  const res = await fetcher("https://api.openai.com/v1/chat/completions", {
     method: "POST",
+    signal: AbortSignal.timeout(timeoutMs),
     headers: { "content-type": "application/json", authorization: `Bearer ${env.OPENAI_API_KEY}` },
     body: JSON.stringify({
       model: env.OPENAI_MODEL,
@@ -59,9 +92,15 @@ export async function draft(
     }),
   });
   if (!res.ok) throw new Error(`openai ${res.status}: ${(await res.text()).slice(0, 200)}`);
-  const body = (await res.json()) as { choices: { message: { content: string | null } }[] };
-  const parsed = DraftSchema.safeParse(JSON.parse(body.choices[0]?.message.content ?? "{}"));
-  if (!parsed.success) return { answer: "I'm not sure.", usedEntryIds: [], confidence: 0, needsOwner: true };
+  const body = (await res.json()) as { choices?: { message?: { content?: string | null } }[] };
+  let json: unknown;
+  try {
+    json = JSON.parse(body.choices?.[0]?.message?.content ?? "");
+  } catch {
+    throw new Error("model returned invalid JSON");
+  }
+  const parsed = DraftSchema.safeParse(json);
+  if (!parsed.success) throw new Error("model JSON has the wrong shape");
   // Only keep citations to entries the model was actually shown.
   const ids = new Set(visible.map((e) => e.id));
   const used = parsed.data.usedEntryIds.filter((id) => ids.has(id));

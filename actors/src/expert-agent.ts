@@ -4,7 +4,7 @@
 import { Actor, Interleave, Persisted } from "terse-sdk/actor";
 import type { Clearance, Snapshot, Tier } from "./vendor/shared/types.js";
 import type { Ask, OwnerReply } from "./vendor/shared/protocol.js";
-import { draft } from "./vendor/engine/llm.js";
+import { draft, fakeDraft } from "./vendor/engine/llm.js";
 import battery from "./vendor/seed/battery.json" with { type: "json" };
 import actuators from "./vendor/seed/actuators.json" with { type: "json" };
 import * as L from "./expert-logic.js";
@@ -81,8 +81,9 @@ export class ExpertAgent extends Actor {
       try {
         d = await draft(p.question, p.context, p.visible, undefined, this.profile.displayName);
       } catch (err) {
-        console.error("[expert] model call failed:", (err as Error).message);
-        d = null; // decide() escalates without a draft
+        // draft() already retries and falls back; this is a last resort. Never escalate on a model failure.
+        console.error("[expert] draft failed, using the deterministic drafter:", (err as Error).message);
+        d = fakeDraft(p.visible);
       }
     }
     const { state, result } = L.finalize(read(this), sender, ask, d);

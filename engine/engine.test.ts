@@ -3,7 +3,7 @@ import battery from "../seed/battery.json" with { type: "json" };
 import actuators from "../seed/actuators.json" with { type: "json" };
 import attacks from "../seed/attacks.json" with { type: "json" };
 import type { KnowledgeEntry, Policy } from "../shared/types.js";
-import { clearanceOf, decide, disclose, fakeDraft, guard, looksLikeInjection, retrieve, userPrompt, withCitations } from "./index.js";
+import { clearanceOf, decide, disclose, draft, fakeDraft, guard, looksLikeInjection, retrieve, userPrompt, withCitations } from "./index.js";
 
 const policy: Policy = {
   clearance: { "asker-priya": 1, "asker-guest": 0 },
@@ -128,5 +128,50 @@ describe("citations", () => {
     expect(withCitations("Peak is 40 A.", ["act-01", "act-03"])).toBe("Peak is 40 A. [act-01, act-03]");
     expect(withCitations("Peak is 40 A [act-01].", ["act-01"])).toBe("Peak is 40 A [act-01].");
     expect(withCitations("Not sure.", [])).toBe("Not sure.");
+  });
+});
+
+describe("model failure never escalates", () => {
+  const env = { OPENAI_API_KEY: "test", OPENAI_MODEL: "test-model" };
+  const visible = act.knowledge.filter((e) => e.id === "act-01");
+  const quiet = () => {};
+  const okBody = (content: string) => new Response(JSON.stringify({ choices: [{ message: { content } }] }));
+
+  test("network error twice -> deterministic drafter, two attempts", async () => {
+    let calls = 0;
+    const fetcher = (async () => { calls++; throw new Error("ECONNRESET"); }) as unknown as typeof fetch;
+    const d = await draft("ACT-7 peak current?", undefined, visible, env, "Actuators", { fetcher, warn: quiet });
+    expect(calls).toBe(2);
+    expect(d).toEqual(fakeDraft(visible));
+    expect(d.needsOwner).toBe(false);
+  });
+  test("timeout -> retry -> fallback", async () => {
+    let calls = 0;
+    const fetcher = ((_u: string, init: RequestInit) => { calls++; return new Promise((_, rej) => init.signal!.addEventListener("abort", () => rej(new Error("timeout")))); }) as unknown as typeof fetch;
+    const t = Date.now();
+    const d = await draft("ACT-7 peak current?", undefined, visible, env, "Actuators", { fetcher, timeoutMs: 50, warn: quiet });
+    expect(calls).toBe(2);
+    expect(Date.now() - t).toBeLessThan(1000);
+    expect(d.needsOwner).toBe(false);
+  });
+  test("invalid JSON, then a good answer on retry", async () => {
+    let calls = 0;
+    const fetcher = (async () => (++calls === 1 ? okBody("not json") :
+      okBody(JSON.stringify({ answer: "Peak is 40 A for 5 s [act-01].", usedEntryIds: ["act-01"], confidence: 0.9, needsOwner: false })))) as unknown as typeof fetch;
+    const d = await draft("ACT-7 peak current?", undefined, visible, env, "Actuators", { fetcher, warn: quiet });
+    expect(calls).toBe(2);
+    expect(d.answer).toBe("Peak is 40 A for 5 s [act-01].");
+  });
+  test("HTTP 500 twice -> fallback; decide() answers instead of escalating", async () => {
+    const fetcher = (async () => new Response("boom", { status: 500 })) as unknown as typeof fetch;
+    const q = "ACT-7 peak current limits";
+    const dsc = disclose(retrieve(q, act.knowledge), 1);
+    const d = await draft(q, undefined, dsc.visible, env, "Actuators", { fetcher, warn: quiet });
+    expect(decide(dsc, d, act.policy, q).status).toBe("answered");
+  });
+  test("a model that answers needsOwner still escalates (that is not a failure)", async () => {
+    const fetcher = (async () => okBody(JSON.stringify({ answer: "Not sure.", usedEntryIds: [], confidence: 0.3, needsOwner: true }))) as unknown as typeof fetch;
+    const d = await draft("regen?", undefined, visible, env, "Actuators", { fetcher, warn: quiet });
+    expect(d.needsOwner).toBe(true);
   });
 });
