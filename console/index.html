@@ -150,7 +150,23 @@
   .flow h2 { margin: 0; }
   #flow-caption { margin: 0; font-size: var(--text-sm); font-weight: 600; color: var(--muted); overflow-wrap: anywhere; }
   .flow-map { overflow-x: auto; }
-  .flow svg { display: block; width: 100%; min-width: 760px; height: auto; max-height: 160px; }
+  .flow svg { display: block; width: 100%; min-width: 760px; height: auto; max-height: 320px; }
+  .flow-node text.sub { font-weight: 400; font-size: 13px; fill: var(--muted); }
+  .flow-node.lit text.sub { fill: var(--on-fill); }
+  .flow svg text.col { font: 700 13px system-ui, sans-serif; fill: var(--muted); text-anchor: middle; letter-spacing: .06em; text-transform: uppercase; }
+  .flow-node.actor rect { stroke: color-mix(in srgb, var(--accent) 55%, var(--line)); }
+  .flow-node.relay rect { stroke: var(--accent); stroke-width: 2; }
+  .actors { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; margin-block: 8px 16px; }
+  .actor-card { border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--line)); border-radius: 10px; padding: 12px 14px; background: var(--panel); }
+  .actor-card h3 { margin: 0 0 2px; font-size: var(--text-md); }
+  .actor-card .kind { margin: 0 0 10px; color: var(--muted); font-size: 13px; }
+  .actor-card dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; font-size: var(--text-sm); }
+  .actor-card dt { color: var(--muted); }
+  .actor-card dd { margin: 0; }
+  .actor-card .entry-id { font-weight: 700; color: var(--accent); }
+  .chip { display: inline-block; padding: 1px 8px; margin: 0 4px 4px 0; border-radius: 999px; border: 1px solid var(--line); font-size: 13px; }
+  .chip.on { border-color: var(--ok); color: var(--ok); }
+  .chip.off { color: var(--muted); text-decoration: line-through; }
   .flow-node rect { fill: var(--raised); stroke: var(--line); stroke-width: 1.5; transition: fill 0.12s, stroke 0.12s; }
   .flow-node text {
     font: 600 var(--text-sm) system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -348,24 +364,35 @@
 
   <section class="flow" aria-labelledby="flow-title">
     <div class="flow-head">
-      <h2 id="flow-title">Agent-to-agent traffic (last exchange)</h2>
+      <h2 id="flow-title">How a question travels <small>live, last exchange</small></h2>
       <p id="flow-caption">No exchanges yet. The next question's path replays here.</p>
     </div>
     <div class="flow-map">
-      <svg viewBox="0 0 1200 116" role="img" aria-label="Askers on the left and experts on the right, connected through Agent Relay in the center, with the owner console below Relay.">
-        <path class="flow-spoke" data-spoke="asker-romano" d="M190 18C340 18 360 40 505 40"/>
-        <path class="flow-spoke" data-spoke="asker-justin" d="M190 62C340 62 360 40 505 40"/>
-        <path class="flow-spoke" data-spoke="expert-software" d="M1010 18C860 18 840 40 695 40"/>
-        <path class="flow-spoke" data-spoke="expert-battery" d="M1010 62C860 62 840 40 695 40"/>
-        <path class="flow-spoke" data-spoke="console" d="M600 80V58"/>
-        <g class="flow-node" data-node="asker-romano"><rect x="1" y="1" width="189" height="34" rx="8"/><text x="95" y="18">asker-romano</text></g>
-        <g class="flow-node" data-node="asker-justin"><rect x="1" y="45" width="189" height="34" rx="8"/><text x="95" y="62">asker-justin</text></g>
-        <g class="flow-node" data-node="relay"><rect x="505" y="22" width="190" height="36" rx="8"/><text x="600" y="40">Agent Relay</text></g>
-        <g class="flow-node" data-node="expert-software"><rect x="1010" y="1" width="189" height="34" rx="8"/><text x="1105" y="18">expert-software</text></g>
-        <g class="flow-node" data-node="expert-battery"><rect x="1010" y="45" width="189" height="34" rx="8"/><text x="1105" y="62">expert-battery</text></g>
-        <g class="flow-node" data-node="console"><rect x="470" y="80" width="260" height="34" rx="8"/><text x="600" y="97">console (Sam)</text></g>
+      <svg viewBox="0 0 1200 300" role="img" aria-label="People's agents on the left talk to team agents on the right only through Agent Relay in the middle. Each team agent is a Terse Durable Actor.">
+        <path class="flow-spoke" data-spoke="asker-sam" d="M241 50C360 50 360 140 460 140"/>
+        <path class="flow-spoke" data-spoke="asker-romano" d="M241 140C360 140 360 140 460 140"/>
+        <path class="flow-spoke" data-spoke="asker-justin" d="M241 230C360 230 360 140 460 140"/>
+        <path class="flow-spoke" data-spoke="expert-software" d="M939 50C840 50 840 140 740 140"/>
+        <path class="flow-spoke" data-spoke="expert-controls" d="M939 140C840 140 840 140 740 140"/>
+        <path class="flow-spoke" data-spoke="expert-robotics" d="M939 230C840 230 840 140 740 140"/>
+        <path class="flow-spoke" data-spoke="console" d="M600 185V262"/>
+        <g class="flow-node" data-node="asker-sam"><rect x="1" y="20" width="240" height="60" rx="10"/><text x="121" y="42">Sam's agent</text><text class="sub" x="121" y="63">Software · asker-sam</text></g>
+        <g class="flow-node" data-node="asker-romano"><rect x="1" y="110" width="240" height="60" rx="10"/><text x="121" y="132">Romano's agent</text><text class="sub" x="121" y="153">Controls · asker-romano</text></g>
+        <g class="flow-node" data-node="asker-justin"><rect x="1" y="200" width="240" height="60" rx="10"/><text x="121" y="222">Justin's agent</text><text class="sub" x="121" y="243">Robotics · asker-justin</text></g>
+        <g class="flow-node actor" data-node="expert-software"><rect x="939" y="20" width="260" height="60" rx="10"/><text x="1069" y="42">Software agent (Sam)</text><text class="sub" x="1069" y="63">Terse Durable Actor</text></g>
+        <g class="flow-node actor" data-node="expert-controls"><rect x="939" y="110" width="260" height="60" rx="10"/><text x="1069" y="132">Controls agent (Romano)</text><text class="sub" x="1069" y="153">Terse Durable Actor</text></g>
+        <g class="flow-node actor" data-node="expert-robotics"><rect x="939" y="200" width="260" height="60" rx="10"/><text x="1069" y="222">Robotics agent (Justin)</text><text class="sub" x="1069" y="243">Terse Durable Actor</text></g>
+        <g class="flow-node relay" data-node="relay"><rect x="460" y="95" width="280" height="90" rx="12"/><text x="600" y="122">Agent Relay</text><text class="sub" x="600" y="146">direct messages between agents</text><text class="sub" x="600" y="166">sender stamped · offline queue</text></g>
+        <g class="flow-node" data-node="console"><rect x="480" y="262" width="240" height="36" rx="8"/><text x="600" y="280">Owner console</text></g>
+        <text class="col" x="121" y="10">People</text><text class="col" x="1069" y="10">Team agents</text>
       </svg>
     </div>
+  </section>
+
+  <section aria-labelledby="actors-title">
+    <h2 id="actors-title">Inside each Terse Durable Actor <small>one per team, live</small></h2>
+    <p class="hint">The only place a team's knowledge lives. It keeps the knowledge, who it's shared with, the audit log and questions waiting on the owner, and it survives restarts. The model is called from inside the actor, with only what the asker may see.</p>
+    <div class="actors" id="actors"></div>
   </section>
 
   <section class="teach" aria-labelledby="teach-title">
@@ -763,6 +790,30 @@
       cell("li", "", `${result.prompt} (${failureReason(result)})`)));
   }
 
+  const OWNER_AGENT = { software: "asker-sam", controls: "asker-romano", robotics: "asker-justin" };
+  const TEAM_LABEL = { software: "Software", controls: "Controls", robotics: "Robotics" };
+  function renderActors(snapshots) {
+    const cards = snapshots.map(({ profile, knowledge, policy, audit, pending }) => {
+      const card = cell("article", "actor-card", "");
+      card.append(cell("h3", "", `${profile.displayName} agent`), cell("p", "kind", `Terse Durable Actor · id "${profile.teamId}" · owner ${profile.ownerName}`));
+      const dl = document.createElement("dl");
+      const row = (term, ...nodes) => { const dd = document.createElement("dd"); dd.append(...nodes); dl.append(cell("dt", "", term), dd); };
+      const kn = knowledge.length ? knowledge.map((e) => { const d = cell("div", "", ""); d.append(cell("span", "entry-id", e.id), ` ${e.title}`); return d; }) : [cell("span", "", "empty")];
+      row("Knowledge", ...kn);
+      const shared = Object.entries(OWNER_AGENT).filter(([team]) => team !== profile.teamId).map(([team, agent]) => {
+        const on = (policy.clearance[agent] ?? policy.defaultClearance) >= 1;
+        return cell("span", `chip ${on ? "on" : "off"}`, TEAM_LABEL[team]);
+      });
+      row("Shared with", ...shared);
+      row("Audit log", `${audit.length} event${audit.length === 1 ? "" : "s"}`);
+      const waiting = pending.filter((p) => p.status === "pending").length;
+      row("Waiting on owner", `${waiting}`);
+      card.append(dl);
+      return card;
+    });
+    byId("actors").replaceChildren(...cards);
+  }
+
   // Team boxes mirror the Software expert's policy: a team is allowed when its asker has clearance >= 1.
   function renderAccess(snapshots) {
     if (accessWrites > 0) return;
@@ -838,6 +889,7 @@
         renderKnowledge(snapshots);
       }
       renderAccess(snapshots);
+      renderActors(snapshots);
       setConnection(true);
       // An event, not a call: a fault in the strip can't reach this poll.
       document.dispatchEvent(new CustomEvent("console:polled", { detail: { events, cards } }));
