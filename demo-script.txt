@@ -27,8 +27,6 @@ DON'T
   - Don't run scripts/beat-check.ts while the askers are up. It takes their
     messages and wipes the demo state.
   - Don't improvise a question. The prompts here are the rehearsed ones.
-  - Don't set an asker's clearance to 2. It really discloses restricted text, and
-    Red team will then report a leak. Reset undoes it.
 
 
 BEAT 1 · Instant cross-team answer

@@ -51,7 +51,7 @@ const sensitivityInput = z.object({
 
 const clearanceInput = z.object({
   agent: z.enum(["asker-priya", "asker-guest"]),
-  level: z.union([z.literal(0), z.literal(1), z.literal(2)]),
+  level: z.union([z.literal(0), z.literal(1)]), // SPEC §6: no asker has clearance 2
 });
 
 const json = (body: unknown, status = 200) => Response.json(body, { status });
