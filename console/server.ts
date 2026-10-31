@@ -1,5 +1,5 @@
 // Owner console server. The page polls; there is no WebSocket.
-// Run: npx bun console/server.ts
+// Run: bun console/server.ts. REAL=1 uses the real actors and Relay (see docs/RUNBOOK.md); otherwise fakes.
 import { z } from "zod";
 import { createCards, ownerReplyInput } from "./escalations";
 import { createFakes, type DevHooks } from "./fakes";
@@ -97,7 +97,16 @@ export function handler(deps: ConsoleDeps) {
   };
 }
 
+/** No `dev` here, so the /dev routes don't exist against the real stack. */
+async function realDeps(): Promise<ConsoleDeps> {
+  const { connect } = await import("../shared/relay");
+  const { expert, feed } = await import("../shared/actors");
+  return { expert, feed, relay: await connect("console") };
+}
+
 if (import.meta.main) {
-  const server = Bun.serve({ port: PORT, hostname: HOSTNAME, fetch: handler(createFakes()) });
-  console.log(`Owner console on ${server.url} (fakes)`);
+  const real = process.env.REAL === "1";
+  const deps = real ? await realDeps() : createFakes();
+  const server = Bun.serve({ port: PORT, hostname: HOSTNAME, fetch: handler(deps) });
+  console.log(`Owner console on ${server.url} (${real ? "real stack" : "fakes"})`);
 }

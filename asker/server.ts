@@ -1,4 +1,5 @@
-// One process per asker: `npx bun asker/server.ts asker-guest`, or set ASKER_AGENT. Default asker-priya.
+// One process per asker: `bun asker/server.ts asker-guest`, or set ASKER_AGENT. Default asker-priya.
+// REAL=1 uses the real Relay (see docs/RUNBOOK.md); otherwise the in-memory fake.
 import { z } from "zod";
 import { fakeConnect } from "../shared/fakes";
 import { createAsker } from "./asker-agent";
@@ -19,7 +20,10 @@ if (!config) {
 }
 const { port, ...identity } = config;
 
-const asker = await createAsker(identity, fakeConnect);
+const real = process.env.REAL === "1";
+// Imported only when asked for, so the fake needs neither the SDK nor .relay-tokens.json.
+const connect = real ? (await import("../shared/relay")).connect : fakeConnect;
+const asker = await createAsker(identity, connect);
 
 const askBody = z.object({ text: z.string().min(1), context: z.string().optional() });
 
@@ -50,4 +54,4 @@ const server = Bun.serve({
   },
 });
 
-console.log(`${agent} (${identity.human}) on ${server.url} using the fake Relay`);
+console.log(`${agent} (${identity.human}) on ${server.url} using the ${real ? "real" : "fake"} Relay`);
