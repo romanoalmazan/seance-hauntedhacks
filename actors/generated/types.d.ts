@@ -251,6 +251,8 @@ interface AskResult {
     answer: AnswerBody
     escalation?: Escalation
     feed: FeedEvent
+    /** Other teams the answer or its used entries point at (e.g. "check with Battery first"). Team ids only, no text. */
+    refersTo: TeamId[]
 }
 interface AuditEvent {
     time: string

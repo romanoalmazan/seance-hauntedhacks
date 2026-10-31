@@ -129,3 +129,21 @@ describe("expert logic", () => {
     expect(X.snapshot(fresh).audit).toHaveLength(0);
   });
 });
+
+describe("consult trigger (refersTo)", () => {
+  test("a used entry that says 'check with Battery' triggers it even when the model's wording omits Battery/BMS", async () => {
+    let s = X.fromSeed(actuators as SeedFile);
+    const r1 = await X.ask(s, PRIYA, mkAsk("actuators", REGEN), drafter);
+    s = X.ownerReply(r1.state, reply(r1.result.escalation!.id)).state;
+    const terse = async (p: X.Prepared) => ({ ...fakeDraft(p.visible), answer: "Yes, up to 15 A of regen [act-L1]." });
+    const r = await X.ask(s, GUEST, mkAsk("actuators", REGEN), terse);
+    expect(r.result.answer.text).not.toMatch(/battery|bms/i);
+    expect(r.result.refersTo).toEqual(["battery"]);
+  });
+  test("plain answers refer to no other team; a team never refers to itself", async () => {
+    const r = await X.ask(X.fromSeed(battery as SeedFile), GUEST, mkAsk("battery", "What current can the pack deliver?"), drafter);
+    expect(r.result.refersTo).toEqual([]);
+    expect(X.teamsMentioned("battery", ["the BMS cuts off"])).toEqual([]);
+    expect(X.teamsMentioned("actuators", ["the BMS cuts off"])).toEqual(["battery"]);
+  });
+});

@@ -29,18 +29,18 @@ const relay = await connect(me, { log: (s) => log(`relay: ${s}`) });
 // is safe for any asker. No new agents.
 const CONSULT = process.env.CONSULT === "1";
 const CONSULT_TIMEOUT_MS = 12_000;
-const CONSULTS: Partial<Record<TeamId, { team: TeamId; mention: RegExp; question: string }>> = {
+const CONSULTS: Partial<Record<TeamId, { team: TeamId; question: string }>> = {
   actuators: {
     team: "battery",
-    mention: /\b(battery|bms)\b/i,
     question: "What continuous and peak current can the pack handle?",
   },
 };
 const waiting = new Map<string, (a: Answer) => void>();
 
-async function consult(original: Message & { kind: "ask" }, body: AnswerBody): Promise<AnswerBody> {
+/** refersTo comes from the actor: the answer text OR any used entry's full text names that team. */
+async function consult(original: Message & { kind: "ask" }, body: AnswerBody, refersTo: TeamId[]): Promise<AnswerBody> {
   const c = CONSULTS[team];
-  if (!CONSULT || !c || (body.status !== "answered" && body.status !== "partial") || !c.mention.test(body.text)) return body;
+  if (!CONSULT || !c || (body.status !== "answered" && body.status !== "partial") || !refersTo.includes(c.team)) return body;
   const requestId = `${original.requestId}:consult-${c.team}`;
   const reply = new Promise<Answer | null>((resolve) => {
     waiting.set(requestId, resolve);
@@ -72,7 +72,7 @@ async function handle(msg: Message, sender: string): Promise<void> {
       const r = await actor.ask(sender, msg); // identity = Relay-stamped sender, never msg.from
       if (r.duplicate) return log(`ask ${msg.requestId} from ${sender}: replay, already handled`);
       await timeline.push(r.feed);
-      await relay.send(sender, answerMsg(msg.requestId, await consult(msg, r.answer)));
+      await relay.send(sender, answerMsg(msg.requestId, await consult(msg, r.answer, r.refersTo ?? [])));
       log(`ask ${msg.requestId} from ${sender}: ${r.answer.status} (${r.answer.sources.map((s) => s.id).join(",") || "-"})`);
       if (r.escalation) {
         await relay.send(CONSOLE, {

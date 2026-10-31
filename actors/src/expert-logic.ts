@@ -2,7 +2,7 @@
 // the Terse actor shell reassigns its @Persisted fields from it, which also sidesteps the
 // "push isn't persisted" bug. No Terse or Relay imports here.
 import type {
-  AuditEvent, Clearance, Escalation, EventKind, FeedEvent, KnowledgeEntry, Policy, Snapshot, Stats, Tier,
+  AuditEvent, Clearance, Escalation, EventKind, FeedEvent, KnowledgeEntry, Policy, Snapshot, Stats, TeamId, Tier,
 } from "./vendor/shared/types.js";
 import type { Answer, Ask, OwnerReply } from "./vendor/shared/protocol.js";
 import { clearanceOf, decide, disclose, guard, preDecide, retrieve, type Draft } from "./vendor/engine/index.js";
@@ -32,6 +32,18 @@ export interface AskResult {
   answer: AnswerBody;
   escalation?: Escalation; // set when status is escalated: send an escalation_notice to console
   feed: FeedEvent;
+  /** Other teams the answer or its used entries point at (e.g. "check with Battery first"). Team ids only, no text. */
+  refersTo: TeamId[];
+}
+
+const TEAM_MENTIONS: Record<TeamId, RegExp> = {
+  battery: /\b(battery|bms)\b/i,
+  actuators: /\b(actuators?|act-?\d+)\b/i,
+};
+
+/** Teams other than `self` named in any of the texts. Pure; exported for tests. */
+export function teamsMentioned(self: TeamId, texts: string[]): TeamId[] {
+  return (Object.keys(TEAM_MENTIONS) as TeamId[]).filter((t) => t !== self && texts.some((x) => TEAM_MENTIONS[t].test(x)));
 }
 
 export interface OwnerReplyResult {
@@ -116,6 +128,7 @@ export function finalize(s: ExpertState, sender: string, ask: Ask, draft: Draft 
   let kind: EventKind = decision.status;
   let leakPrevented = false;
   let entriesUsed: string[] = [];
+  let refersTo: TeamId[] = [];
   let answer: AnswerBody;
   const base = { team: s.profile.teamId, provenance: "expert_agent" as const, ownerName: owner, withheld };
 
@@ -143,6 +156,7 @@ export function finalize(s: ExpertState, sender: string, ask: Ask, draft: Draft 
       answer = { ...base, status: "refused", confidence: 1, sources: [], text: "I can't share that at your access level." };
     } else {
       entriesUsed = used;
+      refersTo = teamsMentioned(s.profile.teamId, [draft!.answer, ...used.map((id) => shown.get(id)!.full)]);
       stats.answeredAuto++;
       if (used.some((id) => shown.get(id)?.source === "owner_answer")) stats.repeatsServed++;
       answer = {
@@ -153,7 +167,7 @@ export function finalize(s: ExpertState, sender: string, ask: Ask, draft: Draft 
   }
 
   const feed = feedEvent(s, sender, ask.question, kind);
-  const result: AskResult = { duplicate: false, answer, escalation, feed };
+  const result: AskResult = { duplicate: false, answer, escalation, feed, refersTo };
   let next: ExpertState = {
     ...s, pending, stats,
     handled: [...s.handled, { requestId: ask.requestId, result }].slice(-HANDLED_CAP),
