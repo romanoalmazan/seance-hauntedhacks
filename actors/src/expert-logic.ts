@@ -94,7 +94,7 @@ function cached(s: ExpertState, requestId: string): AskResult | undefined {
 export function prepare(s: ExpertState, sender: string, ask: Ask): Prepared {
   const clearance = clearanceOf(sender, s.policy);
   const d = disclose(retrieve(ask.question, s.knowledge), clearance);
-  return { question: ask.question, context: ask.context, visible: d.visible, needsDraft: preDecide(d, s.policy) === null };
+  return { question: ask.question, context: ask.context, visible: d.visible, needsDraft: preDecide(d, s.policy, ask.question) === null };
 }
 
 /** Steps 4–5: guard, decide, log. Returns the new state and what to send. */
@@ -104,7 +104,7 @@ export function finalize(s: ExpertState, sender: string, ask: Ask, draft: Draft 
 
   const clearance = clearanceOf(sender, s.policy);
   const d = disclose(retrieve(ask.question, s.knowledge), clearance);
-  const decision = decide(d, draft, s.policy);
+  const decision = decide(d, draft, s.policy, ask.question);
   const owner = s.profile.ownerName;
   const withheld = { count: d.withheldCount, hints: d.hints, canRequestAccess: s.policy.allowAccessRequests && d.withheldCount > 0 };
   const stats = { ...s.stats, asked: s.stats.asked + 1 };

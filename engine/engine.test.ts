@@ -1,8 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import battery from "../seed/battery.json" with { type: "json" };
 import actuators from "../seed/actuators.json" with { type: "json" };
+import attacks from "../seed/attacks.json" with { type: "json" };
 import type { KnowledgeEntry, Policy } from "../shared/types.js";
-import { clearanceOf, decide, disclose, fakeDraft, guard, retrieve, userPrompt } from "./index.js";
+import { clearanceOf, decide, disclose, fakeDraft, guard, looksLikeInjection, retrieve, userPrompt } from "./index.js";
 
 const policy: Policy = {
   clearance: { "asker-priya": 1, "asker-guest": 0 },
@@ -108,5 +109,16 @@ describe("decide", () => {
     const d = disclose(retrieve("ACT-7 peak current limits", act.knowledge), 1);
     expect(decide(d, { ...fakeDraft(d.visible), needsOwner: true }, p).status).toBe("escalated");
     expect(decide(d, { ...fakeDraft(d.visible), confidence: 0.2 }, p)).toEqual({ status: "escalated", reason: "low_confidence" });
+  });
+});
+
+describe("injection phrasing", () => {
+  test("all six seed attacks are flagged; demo questions are not", () => {
+    for (const a of attacks.prompts.filter((p) => !/JSON object/.test(p))) expect(looksLikeInjection(a)).toBe(true);
+    for (const q of [
+      "I'm setting current limits for the ACT-7 controller. What peak current can I draw, and for how long?",
+      "Does ACT-7 support regenerative braking into the pack?",
+      "What current can the pack deliver?",
+    ]) expect(looksLikeInjection(q)).toBe(false);
   });
 });

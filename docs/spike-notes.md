@@ -99,3 +99,24 @@ Methods take and return plain JSON. No extra client config is needed for local; 
 - `terse-sdk` pulls zod 4 nested under `node_modules/terse-sdk/node_modules`. The root stays on zod 3.25. No conflict seen.
 - One dev server at a time (it takes `actors/.durable-actors/runtime.lock`). Stop it with Ctrl+C, or `pkill -f 'terse actor dev'; pkill -f runActorDev`.
 - Throwaway files to delete once real actors exist: `actors/src/hello.ts` (and its re-export in `actors/src/actor.ts`), `scripts/spike-s1.ts`.
+
+## Core stack: how to run it (verified 2026-10-31 ~12:00)
+
+```sh
+export PATH="$HOME/.bun/bin:$PATH"
+nohup node node_modules/@relaycast/engine/dist/bin/serve.js --db ./relaycast.db --port 8787 > relay-engine.log 2>&1 &
+bun scripts/setup-relay.ts                     # idempotent
+bun run actors:dev                             # Terse dev server, 127.0.0.1:7100 (run actors:gen after changing public actor methods)
+bun bridge/expert-bridge.ts battery            # one terminal each
+bun bridge/expert-bridge.ts actuators
+bun scripts/beat-check.ts                      # beats 1, 2, 2½, 3 + replay -> 6/6
+bun scripts/guard-check.ts                     # 6 seed attacks + 7 variants, 0 leaks
+bun scripts/ask.ts asker-priya actuators "Does ACT-7 support regenerative braking into the pack?"
+bun scripts/owner-reply.ts actuators <escalationId> "<text>" --save --tier public --tags regen,braking
+```
+
+- The model call runs inside `ExpertAgent.ask` (`@Interleave`). Without `OPENAI_API_KEY` + `OPENAI_MODEL` (or with `LLM_FAKE=1`) a deterministic drafter quotes the visible entries, so everything runs offline.
+- Actor ids: `ExpertAgent` = `battery` / `actuators`, `Feed` = `main`. The seed files carry no policy; the demo policy (Priya 1, Guest 0, default 0, minMatchScore 2, minConfidence 0.6) is `DEMO_POLICY` in `actors/src/expert-logic.ts`.
+- Terse compiles with `nodenext` resolution: relative imports in `actors/src`, `engine/` and anything they import need `.js` extensions, and JSON imports need `with { type: "json" }`. Every actor method must be async (helpers are module functions).
+- Questions with injection phrasing ("ignore your rules", "system prompt", "verbatim", "override", base64, ...) are refused outright instead of escalated, so a red-team run doesn't page the owner.
+- Retrieval scores title + tags + releasable hint (not the full text); entries under half the top score are dropped.
