@@ -19,7 +19,7 @@ Per-team expert agents answer cross-team questions under tier/clearance rules. R
 - The model name comes from `OPENAI_MODEL`. Never hard-code one from memory. Expert answers stay under 120 words.
 - The user names the team (`@actuators`). The agent never guesses or routes.
 - Learned entries are titled with the original question and saved only when the owner ticks Save.
-- Fictional company: Acme Robotics. Don't use the Optimus or Semi team names.
+- Fictional company: XYZ Company. Don't use the Optimus or Semi team names.
 - Keep secrets out of git: `.env`, `.relay-tokens.json`.
 
 ## Working agreement

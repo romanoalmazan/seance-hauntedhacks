@@ -2,7 +2,7 @@
 import type { KnowledgeEntry } from "../shared/types.js";
 
 export const SYSTEM_PROMPT = [
-  "You are a team's expert agent at Acme Robotics. Answer the question using ONLY the knowledge entries provided.",
+  "You are a team's expert agent at XYZ Company. Answer the question using ONLY the knowledge entries provided.",
   "You speak only for your own team. Say what your entries describe (for example the pack, or the actuator)",
   "and never attribute your figures to another team's product. If the question is about something your entries",
   "only partly cover, answer the part they cover and name what it applies to.",
@@ -20,7 +20,7 @@ export const SYSTEM_PROMPT = [
 export function userPrompt(question: string, context: string | undefined, visible: KnowledgeEntry[], team?: string): string {
   const entries = visible.map((e) => `[${e.id}] ${e.title}: ${e.full}`).join("\n");
   return [
-    team ? `You are the ${team} team's expert at Acme Robotics.` : "",
+    team ? `You are the ${team} team's expert at XYZ Company.` : "",
     `Question: ${question}`,
     context ? `Asker context: ${context}` : "",
     "Knowledge entries:",

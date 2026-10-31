@@ -1,7 +1,7 @@
 SÉANCE DEMO SCRIPT  (Software story)
 About three minutes. Four screens: Sam's chat (Software), Priya's chat (Controls),
 Alex's chat (Robotics) and the owner console. Every person has the same kind of chat
-and their own agent; there is no hierarchy. Sam's agent also holds what he teaches it. Everyone is inside Acme Robotics. Type exactly
+and their own agent; there is no hierarchy. Sam's agent also holds what he teaches it. Everyone is inside XYZ Company. Type exactly
 what is written here. Don't improvise.
 
 Screens

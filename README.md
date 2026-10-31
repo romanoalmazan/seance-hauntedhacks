@@ -6,7 +6,7 @@ Séance gives every team its own expert agent, so you can ask the agent instead 
 
 In every company one engineer knows the battery limits, and everyone pings that person. Most internal Q&A bots put one shared bot over all the documents: one leak point and one set of rules for everyone. In Séance, your agent asks the expert of the team you name. The expert filters by your clearance before the model reads anything, and if it doesn't know, it asks its human owner once, then answers everyone else from the saved answer.
 
-Acme Robotics, its teams and its people are fictional.
+XYZ Company, its teams and its people are fictional.
 
 ## What you'll see
 

@@ -228,7 +228,7 @@ Every message is one JSON string in the DM body and carries `v, kind, requestId,
 
 ## §11 Seed data
 
-The company is **Acme Robotics**. Everything is fictional and written at the event. Two expert teams, five entries each. Bold values in the full text are the planted secrets; they are the `protectedTokens`. Tags are not specified in the playbook *(assumption: 3–5 lowercase keywords per entry, drawn from its title and text)*. For public entries `releasable` is null (nothing is hidden).
+The company is **XYZ Company**. Everything is fictional and written at the event. Two expert teams, five entries each. Bold values in the full text are the planted secrets; they are the `protectedTokens`. Tags are not specified in the playbook *(assumption: 3–5 lowercase keywords per entry, drawn from its title and text)*. For public entries `releasable` is null (nothing is hidden).
 
 ### Battery expert · owner Dana · teamId `battery`
 
@@ -402,7 +402,7 @@ liaison/
 
 Séance and Liaison are the same product at two zoom levels. Build Liaison, with these changes.
 
-1. **Use the Séance name and the "data stays home" line.** Open with "ask the agent, not the engineer." Explain with "data stays home, answers travel." Keep Acme Robotics as the fictional company. Avoid Séance's Optimus and Semi factory team names; they read as a real carmaker.
+1. **Use the Séance name and the "data stays home" line.** Open with "ask the agent, not the engineer." Explain with "data stays home, answers travel." Keep XYZ Company as the fictional company. Avoid Séance's Optimus and Semi factory team names; they read as a real carmaker.
 2. **Expert-to-expert asks are the first stretch.** Marcus's scripted reply says "check with Battery first." Let the Actuators expert DM the Battery expert at its own clearance and merge the answer. No new agents needed.
 3. **End on the audit log.** Beat 4 already does this. Keep it.
 4. **Run the local Relay engine from the start.** Not as a fallback. No agent cap, no rate limit, no venue Wi-Fi. The hosted free tier allows 5 agents and the spec already uses all five, so the CLI-asker stretch could not even register.

@@ -1,6 +1,6 @@
 # Séance: submission text
 
-Haunted Hacks, 2026-10-31. The demo uses a fictional company, Acme Robotics.
+Haunted Hacks, 2026-10-31. The demo uses a fictional company, XYZ Company.
 
 ## Pitch
 
