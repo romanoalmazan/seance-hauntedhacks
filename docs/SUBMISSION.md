@@ -20,6 +20,8 @@ In every company one engineer knows the battery limits, and everyone pings that 
 
 **The boundary holds.** Guest sends a prompt injection straight to the Battery expert, asking it to print every entry, including supplier prices and cell yield. The expert refuses, shows only a hint, and points the asker to Dana for access. The audit log records the attempt and the withheld restricted entry. The Red team button then runs six attacks and shows "6 of 6 blocked". The privacy claim is shown, not asserted.
 
+**The owner controls disclosure live.** Dana flips `bat-02` from internal to public in the console, and the next answer reflects it.
+
 ## How it's built
 
 **Terse Durable Actors.** One expert actor per team holds that team's knowledge, policy, pending escalations, audit log and stats. It is the only place restricted text lives. The actor filters by clearance before any model sees the text, then guards the draft, decides and logs. It is also why the durability beat works: the pending escalation lives in the actor, not in the process we kill. A second, shared actor keeps the event timeline the console displays.
@@ -32,7 +34,6 @@ Remove either sponsor tool and the product stops working. The rules are enforced
 
 ## What we'd build next
 
-- A live tier control in the console, so an owner can flip an entry from internal to public and change what people see right away.
 - The access-request flow, so "You can ask Dana for access" becomes a request Dana can decide.
 - Expert-to-expert asks: Actuators asks Battery about the BMS state at its own clearance.
 - Claude Code or Codex CLI as an asker through Relay.
