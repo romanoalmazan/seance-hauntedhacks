@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Séance owner console</title>
+<style>
+  :root {
+    --surface: #14141a;
+    --panel: #1d1d26;
+    --line: #30303c;
+    --ink: #f1f0f4;
+    --ink-2: #b6b4c0;
+    --ink-3: #8c8a98;
+    --good: #57c28a;
+    --warning: #e0b04f;
+    --critical: #ec7a70;
+    --accent: #a596e8;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0 auto;
+    max-width: 960px;
+    padding: 24px;
+    background: var(--surface);
+    color: var(--ink);
+    font: 16px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  header { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; }
+  h1 { font-size: 20px; margin: 0; }
+  h2 { font-size: 13px; font-weight: 600; color: var(--ink-2); margin: 32px 0 8px; }
+  #status { margin-left: auto; font-size: 14px; color: var(--ink-3); }
+  #status.down { color: var(--critical); font-weight: 600; }
+  button {
+    font: inherit;
+    font-size: 14px;
+    padding: 6px 14px;
+    color: var(--ink);
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  button:hover:not(:disabled) { border-color: var(--ink-3); }
+  button:disabled { opacity: 0.6; cursor: default; }
+
+  .counters { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; }
+  .tile {
+    grid-column: span 2;
+    padding: 14px 16px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+  }
+  .tile.hero { grid-column: span 3; padding: 18px 20px; }
+  .tile .label { font-size: 14px; color: var(--ink-2); }
+  .tile .value { font-size: 32px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .tile.hero .value { font-size: 56px; line-height: 1.1; }
+  body.stale .value { color: var(--ink-3); }
+
+  ol#timeline { list-style: none; margin: 0; padding: 0; }
+  ol#timeline li {
+    display: grid;
+    grid-template-columns: 72px 184px 128px 1fr;
+    gap: 12px;
+    align-items: baseline;
+    padding: 10px 0;
+    border-top: 1px solid var(--line);
+  }
+  .time, .asker { font-size: 14px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+  .route { font-size: 14px; color: var(--ink-2); }
+  .question { overflow-wrap: anywhere; }
+  .decision { display: block; font-size: 14px; font-weight: 600; color: var(--ink-2); }
+  .decision::before { content: "●"; margin-right: 6px; font-size: 11px; color: var(--mark, var(--ink-3)); }
+  .decision.answered, .decision.partial { --mark: var(--good); }
+  .decision.escalated { --mark: var(--warning); }
+  .decision.learned { --mark: var(--accent); }
+  .decision.guard_blocked, .decision.refused { --mark: var(--critical); }
+  #empty { color: var(--ink-3); padding: 10px 0; border-top: 1px solid var(--line); }
+
+  @media (max-width: 640px) {
+    .tile, .tile.hero { grid-column: span 3; }
+    ol#timeline li { grid-template-columns: 1fr 1fr; }
+    .question { grid-column: 1 / -1; }
+  }
+</style>
+</head>
+<body>
+  <header>
+    <h1>Séance owner console</h1>
+    <span id="status" role="status">Connecting…</span>
+    <button id="reset" type="button">Reset</button>
+  </header>
+
+  <section class="counters" aria-label="Counters, both teams combined">
+    <div class="tile hero"><div class="label">Interruptions avoided</div><div class="value" id="interruptions">–</div></div>
+    <div class="tile hero"><div class="label">Leaks blocked</div><div class="value" id="leaks">–</div></div>
+    <div class="tile"><div class="label">Asked</div><div class="value" id="asked">–</div></div>
+    <div class="tile"><div class="label">Learned</div><div class="value" id="learned">–</div></div>
+    <div class="tile"><div class="label">Repeats served</div><div class="value" id="repeats">–</div></div>
+  </section>
+
+  <h2>Timeline</h2>
+  <ol id="timeline"></ol>
+  <p id="empty" hidden>No questions yet.</p>
+
+<script>
+  const TEAMS = ["battery", "actuators"];
+  const POLL_MS = 1000;
+  const DECISION_LABELS = {
+    answered: "Answered",
+    partial: "Partial",
+    refused: "Refused",
+    escalated: "Escalated",
+    guard_blocked: "Guard blocked",
+    learned: "Learned",
+  };
+
+  const byId = (id) => document.getElementById(id);
+  const timeline = byId("timeline");
+  let renderedFeed = null;
+  let resetFailed = false;
+
+  async function getJson(url) {
+    const response = await fetch(url, { cache: "no-store" });
+    if (!response.ok) throw new Error(`${url} returned ${response.status}`);
+    return response.json();
+  }
+
+  function renderCounters(snapshots) {
+    const sum = (key) => snapshots.reduce((total, snapshot) => total + snapshot.stats[key], 0);
+    byId("interruptions").textContent = sum("answeredAuto");
+    byId("leaks").textContent = sum("blocked");
+    byId("asked").textContent = sum("asked");
+    byId("learned").textContent = sum("learned");
+    byId("repeats").textContent = sum("repeatsServed");
+  }
+
+  function cell(tag, className, text) {
+    const element = document.createElement(tag);
+    element.className = className;
+    element.textContent = text; // Questions are attacker-controlled: never use innerHTML here.
+    return element;
+  }
+
+  function clock(iso) {
+    const date = new Date(iso);
+    return Number.isNaN(date.getTime()) ? iso : date.toLocaleTimeString([], { hour12: false });
+  }
+
+  function renderFeed(events) {
+    const serialized = JSON.stringify(events);
+    if (serialized === renderedFeed) return;
+    renderedFeed = serialized;
+
+    // The contract does not fix recent()'s order, so sort here: newest first.
+    const newestFirst = [...events].sort((a, b) => Date.parse(b.time) - Date.parse(a.time));
+    timeline.replaceChildren(...newestFirst.map((event) => {
+      const row = document.createElement("li");
+      row.append(
+        cell("span", "time", clock(event.time)),
+        cell("span", "asker", `${event.asker} → ${event.team}`),
+        cell("span", `decision ${event.decision}`, DECISION_LABELS[event.decision] ?? event.decision),
+        cell("span", "question", event.question),
+      );
+      return row;
+    }));
+    byId("empty").hidden = events.length > 0;
+  }
+
+  function setConnection(up) {
+    const status = byId("status");
+    document.body.classList.toggle("stale", !up);
+    status.classList.toggle("down", !up || resetFailed);
+    if (!up) status.textContent = "Disconnected, numbers are stale";
+    else status.textContent = resetFailed ? "Reset failed" : "Live";
+  }
+
+  // Reschedules after each poll finishes, so a slow actor cannot stack up requests.
+  async function poll() {
+    try {
+      const [events, ...snapshots] = await Promise.all([
+        getJson("/feed"),
+        ...TEAMS.map((team) => getJson(`/snapshot/${team}`)),
+      ]);
+      renderCounters(snapshots);
+      renderFeed(events);
+      setConnection(true);
+    } catch (error) {
+      console.error(error);
+      setConnection(false);
+    }
+    setTimeout(poll, POLL_MS);
+  }
+
+  byId("reset").addEventListener("click", async (event) => {
+    const button = event.currentTarget;
+    button.disabled = true;
+    try {
+      const response = await fetch("/reset", { method: "POST" });
+      resetFailed = !response.ok;
+    } catch {
+      resetFailed = true;
+    }
+    button.disabled = false;
+  });
+
+  poll();
+</script>
+</body>
+</html>
