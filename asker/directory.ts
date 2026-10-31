@@ -11,6 +11,13 @@ export interface TeamInfo {
 
 export const DIRECTORY: TeamInfo[] = [
   {
+    teamId: "software",
+    displayName: "Software",
+    ownerName: "Sam",
+    owns: "X database ingest format, data pipelines, internal APIs",
+    address: "expert-software",
+  },
+  {
     teamId: "battery",
     displayName: "Battery",
     ownerName: "Dana",

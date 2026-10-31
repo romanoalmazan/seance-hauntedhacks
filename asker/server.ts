@@ -1,4 +1,4 @@
-// One process per asker: `bun asker/server.ts asker-guest`, or set ASKER_AGENT. Default asker-priya.
+// One process per asker: `bun asker/server.ts asker-robotics`, or set ASKER_AGENT. Default asker-priya.
 // REAL=1 uses the real Relay (see docs/RUNBOOK.md); otherwise the in-memory fake.
 import { z } from "zod";
 import { fakeConnect } from "../shared/fakes";
@@ -9,7 +9,7 @@ import { eventStream } from "./events";
 
 const ASKERS: Record<string, { port: number } & AskerIdentity> = {
   "asker-priya": { agent: "asker-priya", human: "Priya Raman", team: "Controls", port: 3001 },
-  "asker-guest": { agent: "asker-guest", human: "Guest", team: "Outside contractor", port: 3002 },
+  "asker-robotics": { agent: "asker-robotics", human: "Alex Chen", team: "Robotics", port: 3002 },
 };
 
 const agent = process.argv[2] ?? process.env.ASKER_AGENT ?? "asker-priya";

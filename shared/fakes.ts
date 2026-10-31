@@ -2,6 +2,7 @@
 // lives in this module. Messages go through encode/parseMessage so the real schema is exercised.
 import actuators from "../seed/actuators.json";
 import battery from "../seed/battery.json";
+import software from "../seed/software.json";
 import { RAW_REQUEST_PREFIX } from "../asker/asker-agent";
 import { encode, parseMessage, PROTOCOL_VERSION } from "./protocol";
 import type { Answer, Ask, RelayClient } from "./protocol";
@@ -9,7 +10,7 @@ import type { TeamId } from "./types";
 
 type Handler = Parameters<RelayClient["onMessage"]>[0];
 
-const SEEDS = { battery, actuators };
+const SEEDS: Record<TeamId, { profile: { ownerName: string }; knowledge: { id: string; title: string; full: string; sensitivity: string; releasable: string | null }[] }> = { battery, actuators, software };
 const EXPERTS = new Set(["expert-battery", "expert-actuators"]);
 const LATENCY_MS = 20;
 const OWNER_DELAY_MS = 3000;
@@ -38,7 +39,7 @@ function answerTo(ask: Ask, fields: Partial<Answer>): Answer {
 // Public only, so a fake answer to Guest never shows anything above their clearance.
 function publicFields(team: TeamId): Pick<Answer, "text" | "sources"> {
   const entry = SEEDS[team].knowledge.find((e) => e.sensitivity === "public");
-  if (!entry) throw new Error(`seed/${team}.json has no public entry`);
+  if (!entry) return { text: "Not sure.", sources: [] };
   return { text: entry.full, sources: [{ id: entry.id, title: entry.title }] };
 }
 

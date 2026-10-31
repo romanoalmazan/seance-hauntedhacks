@@ -175,7 +175,7 @@
   </div>
   <form id="form">
     <input id="input" aria-label="Your question" autocomplete="off" autofocus
-           placeholder="@actuators What peak current can I draw?">
+           placeholder="@software What format should data be in to send it to the X database?">
     <button type="submit">Ask</button>
   </form>
 </main>
@@ -346,7 +346,7 @@
 
   loadDirectory().catch((err) => {
     document.getElementById("teams").classList.add("unavailable");
-    addBubble("agent failed", `Couldn't load the team directory: ${err.message}\nYou can still ask by typing @battery or @actuators.`);
+    addBubble("agent failed", `Couldn't load the team directory: ${err.message}\nYou can still ask by typing @software, @battery or @actuators.`);
   });
 </script>
 </body>
