@@ -61,11 +61,7 @@ async function consult(original: Message & { kind: "ask" }, body: AnswerBody): P
     ...body,
     text: `${body.text}\n\nI checked with the ${c.team} expert: ${r.text}`,
     sources: [...body.sources, ...r.sources],
-    withheld: {
-      count: body.withheld.count + r.withheld.count,
-      hints: [...body.withheld.hints, ...r.withheld.hints],
-      canRequestAccess: body.withheld.canRequestAccess,
-    },
+    // Battery's withheld hints describe what it kept from US, not from the asker: not merged.
   };
 }
 
