@@ -98,3 +98,9 @@ Start after I have pulled main, so docs/c8-demo.md and scripts/warmup.ts exist. 
 2. demo-script.txt, a pre-demo checklist at the top: `CONSULT=1` is in .env (not on the command line), run scripts/demo.sh, run `bun scripts/warmup.ts` once, press Reset, then start. Add a note that real-model answers are 2 to 4 sentences of prose with [id] citations and the wording varies a little between runs, so each beat's check is which pill, which sources and which counters, not exact text.
 3. docs/RUNBOOK.md: add where CONSULT=1 goes and how to check it (`grep listening bridge-actuators.log` ends with `consults battery`), the warmup step, and a failure entry: beat 3 shows no consult, so check .env has CONSULT=1 and restart the actuators bridge.
 4. Keep the Don't list intact. Commit only the files you changed, by path.
+
+## P9 · README for judges (low effort, no code changes)
+
+For this task you own README.md at the repo root; it is currently just a title. Read SPEC §0, §2 and §3, docs/SUBMISSION.md, docs/RUNBOOK.md and docs/c8-demo.md first. Do not change any code.
+
+Write README.md with: the pitch and the two taglines ("Ask the agent, not the engineer." and "Data stays home, answers travel."); what you'll see (the four demo beats, one line each, plus the expert-to-expert consult); a small architecture diagram in plain text (asker, Agent Relay, expert bridge, expert actor, model, owner console, feed actor); how it uses Terse Durable Actors (Stateful Apps) and Agent Relay (Agent to agent); how to run it (copy .env.example to .env, bun install, scripts/demo.sh, the three URLs, bun scripts/warmup.ts, demo-script.txt), taken from docs/RUNBOOK.md; the checks (bun test, scripts/beat-check.ts, scripts/guard-check.ts, scripts/redteam.ts) with a note on when each can run; a repo map; and a line that Acme Robotics is fictional. Facts only from the repo: verify that every command and path you mention exists. Commit README.md only, by path.
