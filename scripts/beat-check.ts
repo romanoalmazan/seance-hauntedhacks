@@ -1,7 +1,8 @@
 // bun scripts/beat-check.ts  — runs beats 1, 2, 2½, 3 (+ replay) against the running stack and
 // prints PASS/FAIL per beat. Needs: Relay engine, Terse dev server, both bridges.
 // Beat 2½ kills the actuators bridge and restarts it (logs to bridge-actuators.log).
-// Resets both experts and the feed first.
+// Resets both experts and the feed first. Run it with the asker and console servers stopped: they also
+// connect as asker-priya / asker-guest / console and take the answers and notices.
 import { connect } from "../shared/relay";
 import { expert, feed } from "../shared/actors";
 import { PROTOCOL_VERSION, type Answer, type RelayClient } from "../shared/protocol";

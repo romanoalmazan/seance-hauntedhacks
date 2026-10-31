@@ -36,6 +36,7 @@ export async function draft(
   context: string | undefined,
   visible: KnowledgeEntry[],
   env: Env = processEnv(),
+  team?: string,
 ): Promise<Draft> {
   if (useFake(env)) return fakeDraft(visible);
   const res = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -47,7 +48,7 @@ export async function draft(
       max_completion_tokens: 400,
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
-        { role: "user", content: userPrompt(question, context, visible) },
+        { role: "user", content: userPrompt(question, context, visible, team) },
       ],
     }),
   });

@@ -79,7 +79,7 @@ export class ExpertAgent extends Actor {
     let d = null;
     if (p.needsDraft) {
       try {
-        d = await draft(p.question, p.context, p.visible);
+        d = await draft(p.question, p.context, p.visible, undefined, this.profile.displayName);
       } catch (err) {
         console.error("[expert] model call failed:", (err as Error).message);
         d = null; // decide() escalates without a draft
