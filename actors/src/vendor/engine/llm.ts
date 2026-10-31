@@ -85,6 +85,8 @@ async function callModel(
       model: env.OPENAI_MODEL,
       response_format: { type: "json_object" },
       max_completion_tokens: 300,
+      temperature: 0, // repeatable demo answers
+      seed: 7,
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: userPrompt(question, context, visible, team) },
