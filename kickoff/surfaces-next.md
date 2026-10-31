@@ -48,7 +48,7 @@ Start only after P1 is committed. Read SPEC §11 (Marcus's scripted reply), §12
 Start only after beats 1 to 4 pass on the real stack. Read SPEC §6, §9 (console-facing calls) and §12 (the optional closer) only.
 
 1. Console: in each team's knowledge list (from snapshot().knowledge), show every entry's tier as a dropdown that calls ConsoleActorApi.setSensitivity through a new POST /sensitivity route, so Dana can flip bat-02 from internal to public live. The next poll shows the change.
-2. Console: a per-asker clearance control (asker-priya and asker-guest, levels 0, 1, 2) that calls setClearance through POST /clearance. It's also the fallback if the second chat page is dropped.
+2. Console: a per-asker clearance control (asker-priya and asker-guest, levels 0 and 1 only: SPEC §6 says no asker has clearance 2, so the control must not offer it and POST /clearance returns 400 for it) that calls setClearance through POST /clearance. It's also the fallback if the second chat page is dropped.
 3. Tests against the fakes for both routes, including a bad tier or level returning 400.
 4. Update the closer step in demo-script.txt with the exact clicks, and add one line to docs/RUNBOOK.md.
 
