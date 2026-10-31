@@ -8,6 +8,7 @@ import type { TeamId } from "../shared/types";
 const QUESTIONS: Record<TeamId, string> = {
   battery: "What current can the pack deliver?",
   actuators: "What peak current can ACT-7 draw?",
+  software: "What format does the X database need?",
 };
 
 for (const team of Object.keys(QUESTIONS) as TeamId[]) {

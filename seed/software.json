@@ -1,0 +1,8 @@
+{
+  "profile": { "teamId": "software", "displayName": "Software", "ownerName": "Sam" },
+  "policy": {
+    "clearance": { "asker-priya": 0, "asker-robotics": 0 },
+    "defaultClearance": 0, "minMatchScore": 2, "minConfidence": 0.6, "allowAccessRequests": true
+  },
+  "knowledge": []
+}

@@ -5,7 +5,7 @@ import type {
   AuditEvent, Clearance, Escalation, EventKind, FeedEvent, KnowledgeEntry, Policy, Snapshot, Stats, TeamId, Tier,
 } from "./vendor/shared/types.js";
 import type { Answer, Ask, OwnerReply } from "./vendor/shared/protocol.js";
-import { clearanceOf, decide, disclose, guard, preDecide, retrieve, type Draft } from "./vendor/engine/index.js";
+import { clearanceOf, decide, disclose, guard, preDecide, retrieve, tokens, type Draft } from "./vendor/engine/index.js";
 
 export const AUDIT_CAP = 200;
 
@@ -39,6 +39,7 @@ export interface AskResult {
 const TEAM_MENTIONS: Record<TeamId, RegExp> = {
   battery: /\b(battery|bms)\b/i,
   actuators: /\b(actuators?|act-?\d+)\b/i,
+  software: /\b(software team)\b/i,
 };
 
 /** Teams other than `self` named in any of the texts. Pure; exported for tests. */
@@ -188,6 +189,32 @@ export async function ask(
   const p = prepare(s, sender, a);
   const draft = p.needsDraft ? await drafter(p) : null;
   return finalize(s, sender, a, draft);
+}
+
+export interface TeachInput { title: string; text: string; tags?: string[]; ownerName?: string }
+
+/**
+ * The owner documents something without being asked (e.g. Software: "the X database ingest format").
+ * Saved as internal: which teams see it is set with the console's team boxes (clearance 1 = allowed).
+ * Tags default to the title and text keywords, so plain-language questions find it.
+ */
+export function teach(s: ExpertState, input: TeachInput): { state: ExpertState; id: string } {
+  const n = s.knowledge.filter((e) => e.source === "owner_answer").length + 1;
+  const id = `${s.profile.teamId.slice(0, 3)}-T${n}`;
+  const owner = input.ownerName ?? s.profile.ownerName;
+  const derived = [...tokens(`${input.title} ${input.text}`)].filter((t) => !/^\d+$/.test(t)).slice(0, 20);
+  const entry: KnowledgeEntry = {
+    id, title: input.title.trim(), tags: (input.tags?.length ? input.tags : derived).map((t) => t.toLowerCase()),
+    sensitivity: "internal", full: input.text.trim(),
+    releasable: `${owner} documented this for approved teams only.`,
+    protectedTokens: [], source: "owner_answer",
+  };
+  let next: ExpertState = { ...s, knowledge: [...s.knowledge, entry], stats: { ...s.stats, learned: s.stats.learned + 1 } };
+  next = withAudit(next, {
+    time: now(), asker: owner, question: `Taught: ${entry.title}`, decision: "learned",
+    entriesUsed: [id], entriesWithheld: [], leakPrevented: false,
+  });
+  return { state: next, id };
 }
 
 /** Owner answered an escalation (SPEC §8). Saves an entry only when reply.save is ticked. */

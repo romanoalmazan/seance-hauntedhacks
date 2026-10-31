@@ -86,6 +86,10 @@ export declare namespace actors {
                 Args: Parameters<Stub["setClearance"]>
                 Result: Awaited<ReturnType<Stub["setClearance"]>>
             }
+            ["setGroupAccess"]: {
+                Args: Parameters<Stub["setGroupAccess"]>
+                Result: Awaited<ReturnType<Stub["setGroupAccess"]>>
+            }
             ["setSensitivity"]: {
                 Args: Parameters<Stub["setSensitivity"]>
                 Result: Awaited<ReturnType<Stub["setSensitivity"]>>
@@ -93,6 +97,10 @@ export declare namespace actors {
             ["snapshot"]: {
                 Args: Parameters<Stub["snapshot"]>
                 Result: Awaited<ReturnType<Stub["snapshot"]>>
+            }
+            ["teach"]: {
+                Args: Parameters<Stub["teach"]>
+                Result: Awaited<ReturnType<Stub["teach"]>>
             }
         }
         interface Methods extends $MethodTypes {}
@@ -123,6 +131,10 @@ export declare namespace actors {
                 type Args = $MethodTypes["setClearance"]["Args"]
                 type Result = $MethodTypes["setClearance"]["Result"]
             }
+            namespace setGroupAccess {
+                type Args = $MethodTypes["setGroupAccess"]["Args"]
+                type Result = $MethodTypes["setGroupAccess"]["Result"]
+            }
             namespace setSensitivity {
                 type Args = $MethodTypes["setSensitivity"]["Args"]
                 type Result = $MethodTypes["setSensitivity"]["Result"]
@@ -130,6 +142,10 @@ export declare namespace actors {
             namespace snapshot {
                 type Args = $MethodTypes["snapshot"]["Args"]
                 type Result = $MethodTypes["snapshot"]["Result"]
+            }
+            namespace teach {
+                type Args = $MethodTypes["teach"]["Args"]
+                type Result = $MethodTypes["teach"]["Result"]
             }
         }
     }

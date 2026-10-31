@@ -27,6 +27,15 @@ export function feed(): FeedApi & { push(e: FeedEvent): Promise<void> } {
   };
 }
 
+/** Console owner calls for the Software story: teach an entry, and the Controls/Robotics team boxes. */
+export function ownerTools(team: TeamId) {
+  const a = actors.ExpertAgent.get(team);
+  return {
+    teach: (input: { title: string; text: string; tags?: string[] }) => a.teach(input),
+    setGroupAccess: (agents: string[], allowed: boolean) => a.setGroupAccess(agents, allowed),
+  };
+}
+
 /** Bridge-only calls. `sender` must be the Relay-stamped agent name. */
 export function expertAgent(team: TeamId): ConsoleActorApi & {
   ask(sender: string, ask: Ask): Promise<AskResult>;

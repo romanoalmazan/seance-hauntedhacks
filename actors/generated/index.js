@@ -28,8 +28,10 @@ export const actors = {
                     { name: "reset", result: "void" },
                     { name: "seed", result: "void" },
                     { name: "setClearance", result: "void" },
+                    { name: "setGroupAccess", result: "void" },
                     { name: "setSensitivity", result: "void" },
-                    { name: "snapshot", result: "value" }
+                    { name: "snapshot", result: "value" },
+                    { name: "teach", result: "value" }
                 ],
                 transport
             )

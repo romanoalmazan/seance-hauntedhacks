@@ -7,11 +7,13 @@ import type { Ask, OwnerReply } from "./vendor/shared/protocol.js";
 import { draft, fakeDraft } from "./vendor/engine/llm.js";
 import battery from "./vendor/seed/battery.json" with { type: "json" };
 import actuators from "./vendor/seed/actuators.json" with { type: "json" };
+import software from "./vendor/seed/software.json" with { type: "json" };
 import * as L from "./expert-logic.js";
 
 const SEEDS: Record<string, L.SeedFile> = {
   battery: battery as L.SeedFile,
   actuators: actuators as L.SeedFile,
+  software: software as L.SeedFile,
 };
 
 function initial(id: string): L.ExpertState {
@@ -89,6 +91,20 @@ export class ExpertAgent extends Actor {
     const { state, result } = L.finalize(read(this), sender, ask, d);
     write(this, state);
     return result;
+  }
+
+  /** The owner documents something directly (console "Teach your agent"). Saved as internal; team boxes decide who sees it. */
+  async teach(input: L.TeachInput): Promise<string> {
+    const { state, id } = L.teach(read(this), input);
+    write(this, state);
+    return id;
+  }
+
+  /** Console team boxes: give every agent of a group clearance 1 (allowed) or 0 on this expert. */
+  async setGroupAccess(agents: string[], allowed: boolean): Promise<void> {
+    let s = read(this);
+    for (const a of agents) s = L.setClearance(s, a, allowed ? 1 : 0);
+    write(this, s);
   }
 
   async ownerReply(reply: OwnerReply): Promise<L.OwnerReplyResult> {

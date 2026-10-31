@@ -4,7 +4,7 @@ import { z } from "zod"
 declare const answerSchema: z.ZodObject<
     {
         kind: z.ZodLiteral<"answer">
-        team: z.ZodEnum<["battery", "actuators"]>
+        team: z.ZodEnum<["battery", "actuators", "software"]>
         status: z.ZodEnum<["answered", "partial", "refused", "escalated"]>
         text: z.ZodString
         confidence: z.ZodNumber
@@ -60,7 +60,7 @@ declare const answerSchema: z.ZodObject<
         status: "answered" | "partial" | "refused" | "escalated"
         at: string
         kind: "answer"
-        team: "battery" | "actuators"
+        team: "battery" | "actuators" | "software"
         v: 1
         text: string
         confidence: number
@@ -82,7 +82,7 @@ declare const answerSchema: z.ZodObject<
         status: "answered" | "partial" | "refused" | "escalated"
         at: string
         kind: "answer"
-        team: "battery" | "actuators"
+        team: "battery" | "actuators" | "software"
         v: 1
         text: string
         confidence: number
@@ -122,7 +122,7 @@ declare const askSchema: z.ZodObject<
                 team: string
             }
         >
-        to: z.ZodEnum<["battery", "actuators"]>
+        to: z.ZodEnum<["battery", "actuators", "software"]>
         question: z.ZodString
         context: z.ZodOptional<z.ZodString>
         v: z.ZodLiteral<1>
@@ -141,7 +141,7 @@ declare const askSchema: z.ZodObject<
             human: string
             team: string
         }
-        to: "battery" | "actuators"
+        to: "battery" | "actuators" | "software"
         v: 1
         context?: string | undefined
     },
@@ -155,7 +155,7 @@ declare const askSchema: z.ZodObject<
             human: string
             team: string
         }
-        to: "battery" | "actuators"
+        to: "battery" | "actuators" | "software"
         v: 1
         context?: string | undefined
     }
@@ -229,8 +229,12 @@ interface $ExpertAgentContract {
         reset(): Promise<void>
         seed(): Promise<void>
         setClearance(agent: string, level: Clearance): Promise<void>
+        /** Console team boxes: give every agent of a group clearance 1 (allowed) or 0 on this expert. */
+        setGroupAccess(agents: string[], allowed: boolean): Promise<void>
         setSensitivity(entryId: string, tier: Tier): Promise<void>
         snapshot(): Promise<Snapshot>
+        /** The owner documents something directly (console "Teach your agent"). Saved as internal; team boxes decide who sees it. */
+        teach(input: TeachInput): Promise<string>
     }
 }
 interface $FeedContract {
@@ -329,6 +333,12 @@ interface Stats {
     learned: number
     blocked: number
 }
+interface TeachInput {
+    title: string
+    text: string
+    tags?: string[]
+    ownerName?: string
+}
 type Answer = z.infer<typeof answerSchema>
 type AnswerBody = Omit<Answer, "v" | "kind" | "requestId" | "at">
 type Ask = z.infer<typeof askSchema>
@@ -336,7 +346,7 @@ type Clearance = 0 | 1 | 2
 type EventKind = Status | "guard_blocked" | "learned"
 type OwnerReply = z.infer<typeof ownerReplySchema>
 type Status = "answered" | "partial" | "refused" | "escalated"
-type TeamId = "battery" | "actuators"
+type TeamId = "battery" | "actuators" | "software"
 type Tier = "public" | "internal" | "restricted"
 
 export {}
