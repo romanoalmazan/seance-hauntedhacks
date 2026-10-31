@@ -6,6 +6,12 @@ Haunted Hacks, 2026-10-31. The demo uses a fictional company, Acme Robotics.
 
 Séance gives every team its own expert agent, so you can ask the agent, not the engineer, and restricted knowledge never leaves the team: data stays home, answers travel.
 
+## Tracks
+
+**Stateful Apps (Terse Durable Actors).** Everything that must survive lives in actors: each team's knowledge, policy, pending escalations, audit log and stats, plus a shared event feed. The durability beat kills a bridge mid-escalation, and the owner's answer still reaches the asker after the restart.
+
+**Agent to agent (Agent Relay).** Priya's agent, each team's expert agent and the owner console are separate Relay agents. Every ask, answer, escalation and owner reply is a DM between them, and the Relay sender is the only proof of who is asking.
+
 ## The problem
 
 In every company one engineer knows the battery limits, and everyone pings that person. Most internal Q&A bots don't fix this safely: they put one shared bot over all the documents, which means one leak point and one set of rules for everyone.

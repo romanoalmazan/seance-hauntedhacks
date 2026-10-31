@@ -63,3 +63,17 @@ The human adds the symptom after the one-line prompt: which beat, which page, wh
 ## P5 · Submission text (low effort, no code changes)
 
 Read SPEC §0, §2, §3 (the parts table) and §12 only, plus demo-script.txt. Write docs/SUBMISSION.md with: (1) a one-sentence pitch; (2) the problem; (3) what it does, in four short paragraphs matching the four demo beats; (4) how it's built, naming Terse Durable Actors (the only place restricted text lives, and the durability beat), Agent Relay (who is asking is proven by the sender) and OpenAI; (5) what we'd build next; (6) a 2-minute demo video script with a line of narration per beat. Facts only from the SPEC and the demo script: no invented metrics, and label any time-saved figure an assumption. Commit only docs/SUBMISSION.md by path.
+
+## P6 · UI polish for judging (no behavior changes)
+
+The human adds the page after the one-line prompt: `Page: chat` (asker/chat.html) or `Page: console` (console/index.html). Do ONE page per session. Start the console page only after the clearance level 2 removal is committed.
+
+Judging scores Execution and Demo and User Experience and Design, and the judges see these pages projected on a screen. Read demo-script.txt first so you know every state the page must show. Change only CSS, markup and microcopy. Keep every element id, class, data attribute, endpoint and message that the tests and scripts rely on; no new dependencies, no build step. If the impeccable skill is available, use its polish guidance.
+
+1. Legible from 2 m on a projector: base text at least 16px, strong contrast, no tiny gray text for anything the demo relies on.
+2. A shared identity across the pages: "Séance" and "Acme Robotics" in a header, one palette, one type scale, and each page says whose view it is (Priya's chat, Guest's chat, Owner console).
+3. Chat page: your question and each team's reply clearly separated and labeled by team; status pills (answered, partial, refused, escalated) unmistakable; sources as chips; withheld hints visually distinct; the waiting-for-owner state and the "Marcus's answer" update obvious.
+4. Console: counters large at the top; the escalation card prominent when it appears (a clear highlight, no noisy animation); the audit panel readable, with restricted ids and the refused pill clear; the Red team result large; the closer controls below, easy to find.
+5. Empty, loading and error states have helpful microcopy.
+
+Check the page in the browser at 1280x720 for each beat in demo-script.txt and compare before and after screenshots. Run bun test: everything must pass. Commit only the files you changed, by path.
