@@ -44,7 +44,7 @@ Should appear on the console:
 ## Who consulted whom, and why it's safe
 
 - `expert-actuators` → DM → `expert-battery`, question: "What continuous and peak current can the pack handle?"
-- Trigger: an Actuators answer (answered or partial) mentions Battery or BMS. Only Actuators consults; Battery never does.
+- Trigger: an Actuators answer (answered or partial) whose text, or the full text of any entry it used, names Battery or the BMS (computed in the actor as `refersTo`, so a model rewording can't skip it). Only Actuators consults; Battery never does.
 - Battery sees the Relay-stamped sender `expert-actuators`, which has clearance **0** in Battery's policy. The merged text can reach any asker, Guest included, so Battery only tells it public facts. Battery's withheld hints are not merged (they describe what Battery kept from the Actuators agent, not from the asker).
 - If Battery doesn't answer within 12 s, or escalates, the Actuators answer goes out unchanged.
 
