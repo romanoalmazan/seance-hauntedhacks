@@ -158,6 +158,8 @@ export function handler(deps: ConsoleDeps) {
 
     if (req.method === "GET") {
       if (pathname === "/") return new Response(Bun.file(`${import.meta.dir}/index.html`));
+      // Sam's own page: he tells his agent the format and picks the teams (demo beat 1).
+      if (pathname === "/sam") return new Response(Bun.file(`${import.meta.dir}/sam.html`));
       if (pathname === "/flow.js") return flowScript();
       if (pathname === "/feed") return json(await deps.feed().recent(FEED_LIMIT));
       if (pathname === "/cards") {

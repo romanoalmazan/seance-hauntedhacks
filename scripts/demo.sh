@@ -117,6 +117,7 @@ wait_for "console" console.log curl -s -o /dev/null 127.0.0.1:3000
 cat <<URLS
 
 Up, on the real stack:
+  Sam's agent    http://127.0.0.1:3000/sam
   Owner console  http://127.0.0.1:3000
   Priya          http://127.0.0.1:3001
   Alex, Robotics http://127.0.0.1:3002

@@ -1,17 +1,19 @@
 SÉANCE DEMO SCRIPT  (Software story)
-About three minutes. Three screens: the owner console (Sam, Software), Priya's chat
-(Controls) and Alex's chat (Robotics). Everyone is inside Acme Robotics. Type exactly
+About three minutes. Four screens: Sam's agent (Software owner), Priya's chat
+(Controls), Alex's chat (Robotics) and the owner console. Everyone is inside Acme Robotics. Type exactly
 what is written here. Don't improvise.
 
 Screens
-  Owner console      http://127.0.0.1:3000   (Sam, owner of the Software agent)
+  Sam's agent        http://127.0.0.1:3000/sam   (Sam, owner of the Software agent)
+  Owner console      http://127.0.0.1:3000       (counters, timeline, audit log)
   Priya, Controls    http://127.0.0.1:3001
   Alex, Robotics     http://127.0.0.1:3002
 
 Before every run
   1. scripts/demo.sh stop && scripts/demo.sh        (from the repo root)
   2. bun scripts/warmup.ts
-  3. Press Reset on the console. Both chats empty, counters 0, both team boxes unticked.
+  3. Press Reset on the console. All three chats go back to empty (Sam's to the greeting,
+     with the format pre-filled again), counters 0.
   4. bun scripts/preflight.ts                        every line must say ok
 
 DON'T
@@ -20,18 +22,20 @@ DON'T
   - Don't restart anything during the demo.
 
 
-BEAT 1 · Sam teaches his agent once            ("Ask the agent, not the engineer.")
-Page: console, "Teach your agent" panel. The fields are pre-filled:
-  What is it?   X database ingest format
-  The details   Send JSON to the X database /ingest endpoint. Each record:
-                device_id (string), ts (ISO-8601, UTC), metric (string),
-                value (number), unit (SI unit string). Batch up to 500 records
-                per POST; gzip bodies over 1 MB.
-Click Teach agent.
-Should appear: "Saved as sof-T1. Tick the teams that may ask." Learned reads 1.
-Then, under "Which teams can ask the Software agent?", tick Controls only.
-Say: Sam writes it once and decides which teams may ask. It lives in his
-team's Durable Actor, not in a shared bot.
+BEAT 1 · Sam tells his agent the format once      ("Ask the agent, not the engineer.")
+Page: Sam's agent (http://127.0.0.1:3000/sam). The box is pre-filled:
+
+  X database ingest format: Send JSON to the X database /ingest endpoint. Each record:
+  device_id (string), ts (ISO-8601, UTC), metric (string), value (number), unit
+  (SI unit string). Batch up to 500 records per POST; gzip bodies over 1 MB.
+
+Click Tell agent.
+Should appear on Sam's page: his message, then his agent: "Got it. I saved
+"X database ingest format" as sof-T1. Which teams may ask me about it?" with two
+checkboxes, Controls and Robotics. Tick Controls only.
+Should appear on the console: Learned 1.
+Say: Sam tells his agent once and decides which teams may ask. It lives in the
+Software team's Durable Actor, not in a shared bot.
 
 
 BEAT 2 · Controls gets the answer without bothering Sam
@@ -66,7 +70,7 @@ anything. Robotics never got the text, not even into the prompt.
 
 
 BEAT 4 · Sam opens it to Robotics, live
-Page: console. Tick Robotics. (No Save button: it applies at once.)
+Page: Sam's agent. Tick Robotics in his agent's reply. (It applies at once.)
 Page: Alex. Type the same question again, then press Enter:
 
   @software What format should data be in to send it to the X database?
@@ -84,4 +88,4 @@ asker-priya answered, asker-robotics refused (withheld sof-T1), asker-robotics
 answered. Guard catches 0.
 Say: data stays home, answers travel. Every answer and refusal is on record.
 
-After the run: press Reset (removes sof-T1, unticks both boxes, clears both chats).
+After the run: press Reset on the console (removes sof-T1, unticks both teams, clears all chats).
