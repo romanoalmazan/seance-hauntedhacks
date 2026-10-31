@@ -61,6 +61,16 @@ describe("reads", () => {
     expect(page).not.toContain("Leaks blocked");
   });
 
+  test("GET /flow.js serves the strip's rules as plain JavaScript", async () => {
+    const response = await get("/flow.js");
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toContain("text/javascript");
+    const script = await response.text();
+    expect(script).toContain("flowEdges");
+    expect(script).not.toContain("interface Edge");
+    expect(script).not.toContain("import type");
+  });
+
   test("snapshot is the full owner view at demo defaults", async () => {
     const view = await snapshot("battery");
     expect(view.profile.ownerName).toBe("Dana");

@@ -138,6 +138,49 @@
     background: var(--bad);
     border-color: var(--bad);
   }
+  /* Flow strip. Outside .pinned: on a 720p screen the pinned band can't spare the height. */
+  .flow {
+    margin-top: 12px;
+    padding: 8px 16px 12px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+  }
+  .flow-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 2px 24px; margin-bottom: 6px; }
+  .flow h2 { margin: 0; }
+  #flow-caption { margin: 0; font-size: var(--text-sm); font-weight: 600; color: var(--muted); overflow-wrap: anywhere; }
+  .flow-map { overflow-x: auto; }
+  .flow svg { display: block; width: 100%; min-width: 760px; height: auto; max-height: 160px; }
+  .flow-node rect { fill: var(--raised); stroke: var(--line); stroke-width: 1.5; transition: fill 0.12s, stroke 0.12s; }
+  .flow-node text {
+    font: 600 var(--text-sm) system-ui, -apple-system, "Segoe UI", sans-serif;
+    fill: var(--text);
+    text-anchor: middle;
+    dominant-baseline: central;
+    transition: fill 0.12s;
+  }
+  .flow-spoke { fill: none; stroke: color-mix(in srgb, var(--muted) 45%, var(--line)); stroke-width: 2; transition: stroke 0.12s; }
+  .flow-spoke.trail { stroke: var(--accent); }
+  .flow-node.trail rect { stroke: var(--accent); stroke-width: 2.5; }
+  .flow-node.waiting rect {
+    fill: color-mix(in srgb, var(--wait) 45%, var(--raised));
+    stroke: var(--wait);
+    stroke-width: 2.5;
+    animation: flow-pulse 1.2s ease-in-out infinite alternate;
+  }
+  .flow-node.lit rect { fill: var(--accent); stroke: var(--accent); animation: none; }
+  .flow-node.lit text { fill: var(--on-fill); }
+  .flow-node.refused.lit rect, .flow-node.refused.trail rect { fill: var(--bad); stroke: var(--bad); }
+  .flow-node.refused.trail text { fill: var(--on-fill); }
+  .flow-spoke.lit { stroke: var(--accent); stroke-width: 3; stroke-dasharray: 10 6; animation: flow-run 0.3s linear infinite; }
+  .flow-spoke.lit.back { animation-direction: reverse; }
+  @keyframes flow-run { to { stroke-dashoffset: -16; } }
+  @keyframes flow-pulse { to { opacity: 0.45; } }
+  @media (prefers-reduced-motion: reduce) {
+    .flow-node rect, .flow-node text, .flow-spoke { transition: none; }
+    .flow-node.waiting rect, .flow-spoke.lit { animation: none; }
+  }
+
   .empty, .hint { margin: 0; color: var(--muted); }
   .empty { padding: 12px 0; border-top: 1px solid var(--line); }
   .hint { margin-top: -8px; font-size: var(--text-sm); }
@@ -293,6 +336,28 @@
     <ul id="redteam-failures"></ul>
   </div>
   </div>
+
+  <section class="flow" aria-labelledby="flow-title">
+    <div class="flow-head">
+      <h2 id="flow-title">Agent-to-agent traffic (last exchange)</h2>
+      <p id="flow-caption">No exchanges yet. The next question's path replays here.</p>
+    </div>
+    <div class="flow-map">
+      <svg viewBox="0 0 1200 116" role="img" aria-label="Askers on the left and experts on the right, connected through Agent Relay in the center, with the owner console below Relay.">
+        <path class="flow-spoke" data-spoke="asker-priya" d="M190 18C340 18 360 40 505 40"/>
+        <path class="flow-spoke" data-spoke="asker-guest" d="M190 62C340 62 360 40 505 40"/>
+        <path class="flow-spoke" data-spoke="expert-battery" d="M1010 18C860 18 840 40 695 40"/>
+        <path class="flow-spoke" data-spoke="expert-actuators" d="M1010 62C860 62 840 40 695 40"/>
+        <path class="flow-spoke" data-spoke="console" d="M600 80V58"/>
+        <g class="flow-node" data-node="asker-priya"><rect x="1" y="1" width="189" height="34" rx="8"/><text x="95" y="18">asker-priya</text></g>
+        <g class="flow-node" data-node="asker-guest"><rect x="1" y="45" width="189" height="34" rx="8"/><text x="95" y="62">asker-guest</text></g>
+        <g class="flow-node" data-node="relay"><rect x="505" y="22" width="190" height="36" rx="8"/><text x="600" y="40">Agent Relay</text></g>
+        <g class="flow-node" data-node="expert-battery"><rect x="1010" y="1" width="189" height="34" rx="8"/><text x="1105" y="18">expert-battery</text></g>
+        <g class="flow-node" data-node="expert-actuators"><rect x="1010" y="45" width="189" height="34" rx="8"/><text x="1105" y="62">expert-actuators</text></g>
+        <g class="flow-node" data-node="console"><rect x="470" y="80" width="260" height="34" rx="8"/><text x="600" y="97">console (Dana, Marcus)</text></g>
+      </svg>
+    </div>
+  </section>
 
   <h2>Escalations</h2>
   <div id="cards"></div>
@@ -694,6 +759,8 @@
         renderKnowledge(snapshots);
       }
       setConnection(true);
+      // An event, not a call: a fault in the strip can't reach this poll.
+      document.dispatchEvent(new CustomEvent("console:polled", { detail: { events, cards } }));
     } catch (error) {
       console.error(error);
       setConnection(false);
@@ -723,6 +790,93 @@
   });
 
   poll();
+</script>
+<script type="module">
+  import { RELAY, eventKey, flowCaption, flowEdges, refusedNode } from "/flow.js";
+
+  const SEQUENCE_MS = 1500;
+  const GAP_MS = 250;
+  const MAX_QUEUED = 8; // After an outage, show the latest few rather than minutes of backlog.
+
+  const caption = document.getElementById("flow-caption");
+  const idleCaption = caption.textContent;
+  const nodes = new Map([...document.querySelectorAll("[data-node]")].map((el) => [el.dataset.node, el]));
+  const spokes = new Map([...document.querySelectorAll("[data-spoke]")].map((el) => [el.dataset.spoke, el]));
+  const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
+
+  let seen = null; // Keys in the last feed read. Null until the first read, which only sets the scene.
+  let queue = [];
+  let timer = null;
+
+  const spokeOf = ({ from, to }) => spokes.get(from === RELAY ? to : from);
+
+  function clear(...classes) {
+    for (const element of [...nodes.values(), ...spokes.values()]) element.classList.remove(...classes);
+  }
+
+  // Asker names come off the wire: a name with no node on the map just lights nothing.
+  function light({ from, to }, classes) {
+    nodes.get(from)?.classList.add(classes);
+    nodes.get(to)?.classList.add(classes);
+    spokeOf({ from, to })?.classList.add(classes);
+  }
+
+  function showTrail(event) {
+    clear("lit", "back", "trail", "refused");
+    caption.textContent = flowCaption(event);
+    nodes.get(refusedNode(event))?.classList.add("refused");
+    for (const edge of flowEdges(event)) light(edge, "trail");
+  }
+
+  function playNext() {
+    timer = null;
+    const event = queue.shift();
+    if (!event) return;
+    if (reducedMotion.matches) {
+      showTrail(event);
+      timer = setTimeout(playNext, SEQUENCE_MS);
+      return;
+    }
+    const edges = flowEdges(event);
+    clear("trail", "refused");
+    caption.textContent = flowCaption(event);
+    nodes.get(refusedNode(event))?.classList.add("refused");
+    const step = (index) => {
+      clear("lit", "back");
+      if (index === edges.length) {
+        showTrail(event);
+        timer = setTimeout(playNext, GAP_MS);
+        return;
+      }
+      light(edges[index], "lit");
+      if (edges[index].from === RELAY) spokeOf(edges[index])?.classList.add("back");
+      timer = setTimeout(step, SEQUENCE_MS / edges.length, index + 1);
+    };
+    step(0);
+  }
+
+  function stop() {
+    clearTimeout(timer);
+    timer = null;
+    queue = [];
+    clear("lit", "back", "trail", "refused");
+    caption.textContent = idleCaption;
+  }
+
+  document.addEventListener("console:polled", ({ detail: { events, cards } }) => {
+    nodes.get("console").classList.toggle("waiting", cards.length > 0);
+
+    // recent() returns newest first; reversed, the stable sort keeps same-millisecond events in order.
+    const oldestFirst = [...events].reverse().sort((a, b) => Date.parse(a.time) - Date.parse(b.time));
+    const fresh = oldestFirst.filter((event) => !seen?.has(eventKey(event)));
+    const firstRead = seen === null;
+    seen = new Set(events.map(eventKey));
+
+    if (events.length === 0) return stop();
+    if (firstRead) return showTrail(oldestFirst.at(-1)); // A reload must not replay history.
+    queue = [...queue, ...fresh].slice(-MAX_QUEUED);
+    if (timer === null) playNext();
+  });
 </script>
 </body>
 </html>

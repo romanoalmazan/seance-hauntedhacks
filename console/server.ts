@@ -69,6 +69,13 @@ async function devEvent(req: Request, dev: DevHooks): Promise<Response> {
   return json({ ok: true });
 }
 
+/** The strip's rules, in the same file the tests import. Browsers can't load TypeScript. */
+async function flowScript(): Promise<Response> {
+  const source = await Bun.file(`${import.meta.dir}/flow.ts`).text();
+  const script = new Bun.Transpiler({ loader: "ts" }).transformSync(source);
+  return new Response(script, { headers: { "content-type": "text/javascript; charset=utf-8" } });
+}
+
 async function resetAskers(): Promise<string[]> {
   const missed = await Promise.all(
     Object.entries(ASKER_URLS).map(async ([agent, url]) => {
@@ -118,6 +125,7 @@ export function handler(deps: ConsoleDeps) {
 
     if (req.method === "GET") {
       if (pathname === "/") return new Response(Bun.file(`${import.meta.dir}/index.html`));
+      if (pathname === "/flow.js") return flowScript();
       if (pathname === "/feed") return json(await deps.feed().recent(FEED_LIMIT));
       if (pathname === "/cards") {
         await cards.reconcile();
