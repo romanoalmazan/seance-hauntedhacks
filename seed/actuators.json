@@ -1,0 +1,94 @@
+{
+  "profile": {
+    "teamId": "actuators",
+    "displayName": "Actuators",
+    "ownerName": "Marcus"
+  },
+  "knowledge": [
+    {
+      "id": "act-01",
+      "title": "ACT-7 electrical limits",
+      "tags": [
+        "act-7",
+        "voltage",
+        "current",
+        "stall",
+        "peak"
+      ],
+      "sensitivity": "public",
+      "full": "ACT-7 runs at 48 V. Rated 25 A continuous. Peak 40 A for up to 5 s. Stall current 55 A.",
+      "releasable": null,
+      "protectedTokens": [],
+      "source": "seed"
+    },
+    {
+      "id": "act-02",
+      "title": "ACT-7 thermal limits",
+      "tags": [
+        "act-7",
+        "thermal",
+        "winding",
+        "temperature",
+        "peak"
+      ],
+      "sensitivity": "internal",
+      "full": "Winding limit is 120 °C. Thermal time constant is about 90 s. Allow at most 3 peak events per minute.",
+      "releasable": "Winding temperature limits apply; details are internal.",
+      "protectedTokens": [],
+      "source": "seed"
+    },
+    {
+      "id": "act-03",
+      "title": "Controller current limit",
+      "tags": [
+        "controller",
+        "current",
+        "limit",
+        "peak"
+      ],
+      "sensitivity": "internal",
+      "full": "Set the controller's peak current limit to 38 A to keep margin below the 40 A rating.",
+      "releasable": "A recommended controller limit exists; details are internal.",
+      "protectedTokens": [],
+      "source": "seed"
+    },
+    {
+      "id": "act-04",
+      "title": "Bearing supplier and cost",
+      "tags": [
+        "bearings",
+        "supplier",
+        "cost",
+        "reject"
+      ],
+      "sensitivity": "restricted",
+      "full": "Bearings come from supplier HERON at $12.80 each, with a 6.2% reject rate. Ref ACT-3308.",
+      "releasable": "Bearings come from a qualified supplier; commercial terms are restricted.",
+      "protectedTokens": [
+        "HERON",
+        "$12.80",
+        "6.2%",
+        "ACT-3308"
+      ],
+      "source": "seed"
+    },
+    {
+      "id": "act-05",
+      "title": "ACT-8 roadmap",
+      "tags": [
+        "act-8",
+        "roadmap",
+        "bus",
+        "gearbox"
+      ],
+      "sensitivity": "restricted",
+      "full": "ACT-8 moves to a 96 V bus in 2027 and drops the gearbox. Ref ACT-9120.",
+      "releasable": "A next-generation actuator is planned; details are restricted.",
+      "protectedTokens": [
+        "96 V",
+        "ACT-9120"
+      ],
+      "source": "seed"
+    }
+  ]
+}
