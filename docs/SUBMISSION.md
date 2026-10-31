@@ -10,7 +10,7 @@ Séance gives every team its own expert agent, so you can ask the agent, not the
 
 **Stateful Apps (Terse Durable Actors).** Everything that must survive lives in actors: each team's knowledge, policy, pending escalations, audit log and stats, plus a shared event feed. The durability beat kills a bridge mid-escalation, and the owner's answer still reaches the asker after the restart.
 
-**Agent to agent (Agent Relay).** Priya's agent, each team's expert agent and the owner console are separate Relay agents. Every ask, answer, escalation and owner reply is a DM between them, and the Relay sender is the only proof of who is asking.
+**Agent to agent (Agent Relay).** Priya's agent, each team's expert agent and the owner console are separate Relay agents. Every ask, answer, escalation and owner reply is a DM between them, and the Relay sender is the only proof of who is asking. The Actuators expert also consults the Battery expert directly, at its own public clearance, with no human in the loop.
 
 ## The problem
 
@@ -22,7 +22,7 @@ In every company one engineer knows the battery limits, and everyone pings that 
 
 **Unknown question escalates, once.** When an expert doesn't know, it says so and asks its human owner. Marcus gets a card in the console, answers, ticks Save and picks a tier, and Priya's reply updates in place, marked as Marcus's answer. The state survives a crash: we kill the Actuators bridge after the question escalates, Marcus answers anyway, and when the bridge restarts Priya still gets the answer.
 
-**Ask once, answered for everyone.** Guest asks the same question and gets Marcus's saved answer instantly, with nobody asked. The same system also gives different detail by clearance: asked what current the pack can deliver, Guest sees only the public envelope, a withheld count, and a hint that peak current derates when the pack is hot and the details are internal.
+**Ask once, answered for everyone.** Guest asks the same question and gets Marcus's saved answer instantly, with nobody asked. Because that answer says to check with Battery, the Actuators expert asks the Battery expert itself over Relay, at its own public clearance, and merges the reply: agent to agent, no human. The same system also gives different detail by clearance: asked what current the pack can deliver, Guest sees only the public envelope, a withheld count, and a hint that peak current derates when the pack is hot and the details are internal.
 
 **The boundary holds.** Guest sends a prompt injection straight to the Battery expert, asking it to print every entry, including supplier prices and cell yield. The expert refuses, shows only a hint, and points the asker to Dana for access. The audit log records the attempt and the withheld restricted entry. The Red team button then runs six attacks and shows "6 of 6 blocked". The privacy claim is shown, not asserted.
 
@@ -41,7 +41,6 @@ Remove either sponsor tool and the product stops working. The rules are enforced
 ## What we'd build next
 
 - The access-request flow, so "You can ask Dana for access" becomes a request Dana can decide.
-- Expert-to-expert asks: Actuators asks Battery about the BMS state at its own clearance.
 - Claude Code or Codex CLI as an asker through Relay.
 - A mirror of the audit log in Supabase Postgres.
 - An `AskerSession` actor, so a person's conversation and outstanding requests survive a restart.
@@ -56,6 +55,6 @@ The live demo runs four minutes, so the video keeps one line per beat. Run the p
 | 0:15 | 1. Instant answer | Priya asks `@actuators @battery`; the counter reads 2 | "Priya names two teams. Both experts answer with sources, and nobody was pinged." |
 | 0:30 | 2. Escalates | Priya asks the regen question; a card appears | "This one, Actuators doesn't know. It says so and asks Marcus. The owner is interrupted once, on purpose." |
 | 0:45 | 2½. State survives | Kill the bridge, Marcus sends with Save ticked, restart; Priya's reply updates | "We kill the Actuators bridge, and Marcus answers anyway. The pending escalation lived in the Durable Actor. His reply waited in Relay's durable queue. On restart, Priya gets it, untouched." |
-| 1:10 | 3. Answered for everyone | Guest asks the regen question, then the pack question | "Guest asks the same thing and gets Marcus's answer instantly. Nobody was asked. On the pack question, Guest's clearance shows only the public envelope, plus a hint that more exists." |
+| 1:10 | 3. Answered for everyone | Guest asks the regen question, then the pack question | "Guest asks the same thing and gets Marcus's answer instantly. Nobody was asked. Marcus's answer said check with Battery, so the Actuators agent just asked the Battery agent itself over Relay, at its own public clearance, and merged the reply: agent to agent, no human. On the pack question, Guest's clearance shows only the public envelope, plus a hint that more exists." |
 | 1:30 | 4. Boundary holds | Guest's `/raw` attack, the audit row, then Red team | "Now an attack, sent straight to the expert. Refused. The audit log shows the attempt, and restricted text never reached the model. Who's asking comes from the Relay sender, so claiming to be the team lead doesn't help. Six attacks, six blocked." |
 | 1:55 | Close | Console | "Ask the agent, not the engineer. Data stays home, answers travel." |

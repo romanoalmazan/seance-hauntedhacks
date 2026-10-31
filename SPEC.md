@@ -52,6 +52,8 @@ Items marked *(assumption)* are not in the playbook. They close a small gap.
 
 Ask path for one question. Numbers match §4. Documents never cross the Relay line; only text the actor has already approved does.
 
+**As built:** the bridge makes one `actor.ask` call and the model call runs inside the expert actor (§16 item 5), so steps ② to ⑤ below all happen inside the actor. The diagram shows the original design.
+
 ```text
 Person (e.g. Priya, clearance 1)
   │  "@actuators ..."
