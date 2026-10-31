@@ -181,7 +181,8 @@
         for (const hint of answer.withheld.hints) hints.append(el("li", "", hint));
         withheld.append(hints);
       }
-      if (answer.withheld.canRequestAccess) {
+      // The offer belongs to a refusal (SPEC §7); a partial answer shows only its hints.
+      if (answer.status === "refused" && answer.withheld.canRequestAccess) {
         withheld.append(el("p", "", `You can ask ${teamOwners[team] ?? "the owner"} for access.`));
       }
       part.append(withheld);
